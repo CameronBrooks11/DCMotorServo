@@ -2,11 +2,17 @@
 #include <PID_v1.h>
 #include <DCMotorServo.h>
 
-#define pin_dcmoto_dir1 4
+ #define pin_dcmoto_dir1 4
 #define pin_dcmoto_dir2 5
 #define pin_dcmoto_pwm_out 6
 #define pin_dcmoto_encode1 2
-#define pin_dcmoto_encode2 3
+#define pin_dcmoto_encode2 3 
+/*
+#define pin_dcmoto_dir1 5
+#define pin_dcmoto_dir2 4
+#define pin_dcmoto_pwm_out 2
+#define pin_dcmoto_encode1 1
+#define pin_dcmoto_encode2 0*/
 
 // Encoder specifications
 #define PPR 11 // Pulses per revolution (PPR) of the encoder
@@ -55,16 +61,16 @@ DCMotorServo servo = DCMotorServo(pin_dcmoto_dir1, pin_dcmoto_dir2, pin_dcmoto_p
  */
  
 // Define PID parameters as variables for easy adjustment
-float KP = 0.1;
-float KI = 0.15;
+float KP = 0.4;
+float KI = 0.4;
 float KD = 0.05;
 
 void setup() {
   Serial.begin(115200); // Initialize serial communication at 115200 baud rate
   // Use defined PID parameters
   servo.myPID->SetTunings(KP, KI, KD);
-  servo.setPWMSkip(50);
-  servo.setAccuracy(14); // Accuracy based on encoder specifics
+  servo.setPWMSkip(70);
+  servo.setAccuracy(20); // Accuracy based on encoder specifics
 }
 
 
@@ -116,16 +122,6 @@ void loop() {
         } else {
           Serial.println("Invalid MOVE command");
         }
-      }
-    }
-    else if (command.startsWith("MAXPWM=")) {
-      int maxPWM = command.substring(7).toInt(); // Extract and convert max PWM value to integer
-      if (maxPWM >= 0 && maxPWM <= 255) {
-        servo.setMaxPWM(maxPWM); // Set the maximum PWM value
-        Serial.print("Setting MAXPWM to: ");
-        Serial.println(maxPWM);
-      } else {
-        Serial.println("Invalid MAXPWM command");
       }
     } else {
       Serial.println("Invalid command");

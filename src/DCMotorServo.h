@@ -16,6 +16,7 @@
 #define DCMotorServo_h
 
 #include <Encoder.h>
+
 #include <PID_v1.h>
 
 /**
@@ -85,7 +86,7 @@ public:
    * @param range The PWM value below which the motor should not move.
    * @return True if the range is set successfully, false otherwise.
    */
-  bool setPWMSkip(uint8_t range);
+  bool setPWMSkip(uint8_t);
 
   /**
    * Sets the maximum allowable PWM value to control the motor speed.
@@ -105,13 +106,13 @@ public:
    * Sets the accuracy for the motor position.
    * @param range The highest tolerable inaccuracy in encoder counts.
    */
-  void setAccuracy(unsigned int range);
+  void setAccuracy(unsigned int);
 
   /**
    * Sets the current position of the motor.
    * @param new_position The new position of the motor.
    */
-  void setCurrentPosition(int new_position);
+  void setCurrentPosition(int);
 
   /**
    * Enables developer/debug mode, providing status information about the encoder and current PID parameters.

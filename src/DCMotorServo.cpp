@@ -222,7 +222,7 @@ void DCMotorServo::_pick_direction()
 {
   if (_PID_output < 0)
   {
-    digitalWrite(_pin_dir_1, LOW);
+    analogWrite(_pin_dir_1, LOW);
     digitalWrite(_pin_dir_2, HIGH);
   }
   else
