@@ -1,96 +1,87 @@
-/**
- * @file DCMotorServo.h
- * @brief Control library for DC motors with PID and encoder feedback.
- *
- * This library provides an interface for controlling DC motors using PID feedback from an encoder. It is designed
- * for use with motors equipped with quadrature encoders and supports various features including setting motor speed
- * and position, stopping, and configuring PID parameters.
- *
- * @note This library is modeled a bit after the AccelStepper library and uses the Encoder library for measuring quadrature encoded signals
- * and the PID library for control.
- *
- * http://www.pjrc.com/teensy/td_libs_Encoder.html
- */
-
+// DCMotorServo.h
 #ifndef DCMotorServo_h
 #define DCMotorServo_h
 
-#include <Encoder.h>
-
 #include <PID_v1.h>
+#include <Arduino.h>
+
+// Define function pointer types for hardware abstraction:
+typedef void (*MotorWriteFunc)(int16_t speed);
+typedef void (*MotorBrakeFunc)();
+typedef int  (*EncoderReadFunc)();
+typedef void (*EncoderWriteFunc)(int newPosition);
 
 /**
  * @class DCMotorServo
  * @brief A class to control DC motors with encoder feedback using PID.
  *
  * Provides methods to control a DC motor's position or speed using a PID controller and feedback from an encoder.
- * It is compatible with motors controlled via a H-bridge like the 754410.
+ * This version is driver-agnostic: hardware-specific operations are provided via function pointers.
  */
 class DCMotorServo
 {
 public:
   /**
    * Constructor for the DCMotorServo class.
-   * @param pin_dir_1 First direction control pin.
-   * @param pin_dir_2 Second direction control pin.
-   * @param pin_pwm_output PWM output pin for motor speed control.
-   * @param pin_encode1 First encoder input pin.
-   * @param pin_encode2 Second encoder input pin.
+   * @param mWrite Function pointer for writing a motor command (signed speed value).
+   * @param mBrake Function pointer for braking the motor.
+   * @param eRead  Function pointer for reading the encoder position.
+   * @param eWrite Function pointer for writing/resetting the encoder position.
    */
-  DCMotorServo(uint8_t pin_dir_1 = 4, uint8_t pin_dir_2 = 5, uint8_t pin_pwm_output = 6, uint8_t pin_encode1 = 2, uint8_t pin_encode2 = 3);
+  DCMotorServo(MotorWriteFunc mWrite, MotorBrakeFunc mBrake, EncoderReadFunc eRead, EncoderWriteFunc eWrite);
 
   PID *myPID; ///< Pointer to PID object for motor control.
 
   /**
-   * Initiates motor movement based on PID calculations.
+   * Runs the PID controller and sends the computed output to the motor driver.
    */
   void run();
 
   /**
-   * Stops the motor by disabling its PWM signal.
+   * Stops the motor by invoking the brake function.
    */
   void stop();
 
   /**
    * Moves the motor to a new relative position.
-   * @param new_rela_position The new position relative to the current position.
+   * @param new_rela_position The relative position to add to the current target.
    */
   void move(int new_rela_position);
 
   /**
-   * Moves the motor to a specific absolute position.
-   * @param new_position The target position for the motor.
+   * Moves the motor to an absolute position.
+   * @param new_position The target position.
    */
   void moveTo(int new_position);
 
   /**
-   * Retrieves the current target position of the motor.
+   * Retrieves the current target position.
    * @return The motor's target position.
    */
   int getRequestedPosition();
 
   /**
-   * Retrieves the actual current position of the motor.
-   * @return The current position as reported by the encoder.
+   * Retrieves the actual current position from the encoder.
+   * @return The current encoder reading.
    */
   int getActualPosition();
 
   /**
-   * Checks if the motor has reached its target position within a defined accuracy.
+   * Checks if the motor has reached its target position within defined accuracy.
    * @return True if the motor is at the target position, false otherwise.
    */
   bool finished();
 
   /**
-   * Sets the PWM skip range.
-   * @param range The PWM value below which the motor should not move.
-   * @return True if the range is set successfully, false otherwise.
+   * Sets the PWM skip value, which defines the minimal PWM level to overcome low-power stalling.
+   * @param range Minimum PWM value.
+   * @return True if set successfully, false otherwise.
    */
-  bool setPWMSkip(uint8_t);
+  bool setPWMSkip(uint8_t range);
 
   /**
-   * Sets the maximum allowable PWM value to control the motor speed.
-   * @param maxPWM The maximum PWM value, which caps the speed.
+   * Sets the maximum PWM value allowed.
+   * @param maxPWM Maximum PWM value.
    */
   void setMaxPWM(uint8_t maxPWM);
 
@@ -103,44 +94,42 @@ public:
   void SetPIDTunings(double Kp, double Ki, double Kd);
 
   /**
-   * Sets the accuracy for the motor position.
-   * @param range The highest tolerable inaccuracy in encoder counts.
+   * Sets the tolerance for position accuracy.
+   * @param range Maximum allowable error.
    */
-  void setAccuracy(unsigned int);
+  void setAccuracy(unsigned int range);
 
   /**
-   * Sets the current position of the motor.
-   * @param new_position The new position of the motor.
+   * Sets the current encoder position.
+   * @param new_position The new encoder position.
    */
-  void setCurrentPosition(int);
+  void setCurrentPosition(int new_position);
 
   /**
-   * Enables developer/debug mode, providing status information about the encoder and current PID parameters.
-   * @return A string containing relevant information for debugging and tuning the motor controller.
+   * Provides debugging information.
+   * @return A string with current status and PID parameters.
    */
   String getDebugInfo();
 
   /**
-   * Generates a string formatted for the Serial Plotter in Arduino IDE, showing
-   * current PID values for real-time tuning and debugging.
-   * @return A string of comma-separated PID values: setpoint, input, and output.
+   * Generates a string formatted for Serial Plotter.
+   * @return A comma-separated string of PID setpoint, input, and output.
    */
   String getSerialPlotter();
 
 private:
-  uint8_t _pin_PWM_output, _pin_dir_1, _pin_dir_2; ///< Pin assignments.
-  double _PID_setpoint, _PID_input, _PID_output;   ///< PID control variables.
-  uint8_t _PWM_output;                             ///< The PWM value for motor output.
+  // PID control variables:
+  double _PID_setpoint, _PID_input, _PID_output;
+  uint8_t _PWM_output;         // Computed PWM value
+  uint8_t _pwm_skip;           // Minimum PWM to overcome low-power stall
+  uint8_t _maxPWM;             // Maximum allowable PWM value
+  uint8_t _position_accuracy;  // Tolerance for position accuracy
 
-  Encoder *_position;         ///< Pointer to the Encoder object.
-  uint8_t _pwm_skip;          ///< Range of PWM to skip for low power movement.
-  uint8_t _maxPWM; ///< The maximum PWM value to prevent the motor from going too fast.
-  uint8_t _position_accuracy; ///< Tolerance for position accuracy.
-
-  /**
-   * Determines the direction of motor rotation based on PID output.
-   */
-  void _pick_direction();
+  // Function pointers for hardware abstraction:
+  MotorWriteFunc motorWrite;
+  MotorBrakeFunc motorBrake;
+  EncoderReadFunc encoderRead;
+  EncoderWriteFunc encoderWrite;
 };
 
 #endif // DCMotorServo_h
