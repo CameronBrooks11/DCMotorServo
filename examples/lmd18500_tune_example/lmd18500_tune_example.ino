@@ -9,17 +9,32 @@
 
 #include <Arduino.h>
 #include <Encoder.h>
-#include "LMD18200.h"     
-#include "DCMotorServo.h" 
+#include "LMD18200.h"
+#include "DCMotorServo.h"
 
-// Define motor driver pins
+// Define the motor and encoder pins
 #define MOTOR_PWM_PIN 6
 #define MOTOR_DIR_PIN 7
 #define MOTOR_BRAKE_PIN 8
-
-// Define encoder pins
 #define ENCODER_PIN1 A2
 #define ENCODER_PIN2 A3
+
+/*
+// First motor driver example
+#define MOTOR_PWM_PIN 6
+#define MOTOR_DIR_PIN 7
+#define MOTOR_BRAKE_PIN 8
+#define ENCODER_PIN1 A2
+#define ENCODER_PIN2 A3
+*/
+/*
+// Second motor driver example
+#define MOTOR_PWM_PIN 11
+#define MOTOR_DIR_PIN 10
+#define MOTOR_BRAKE_PIN 12
+#define ENCODER_PIN1 A0
+#define ENCODER_PIN2 A1
+*/
 
 // Create an instance of the LMD18200 motor driver
 LMD18200 motorDriver(MOTOR_PWM_PIN, MOTOR_DIR_PIN, MOTOR_BRAKE_PIN);
@@ -66,8 +81,9 @@ void setup()
 
     // Configure the PID controller
     servo.myPID->SetTunings(KP, KI, KD);
-    servo.setPWMSkip(50);
+    servo.setPWMSkip(25);
     servo.setAccuracy(14);
+    servo.setMaxPWM(200);
 
     Serial.println("DCMotorServo with LMD18200 Example");
     Serial.println("Setpoint,Input,Output");

@@ -130,8 +130,11 @@ String DCMotorServo::getDebugInfo()
   return info;
 }
 
-String DCMotorServo::getSerialPlotter()
+String DCMotorServo::getSerialPlotter(int id)
 {
-  String data = "Setpoint:" + String(_PID_setpoint) + ", Input:" + String(_PID_input) + ", Output:" + String(_PID_output);
+  String suffix = (id >= 0) ? String(id) : "";
+  String data = "Setpoint" + suffix + ":" + String(_PID_setpoint, 2) +
+                ", Input" + suffix + ":" + String(_PID_input, 2) +
+                ", Output" + suffix + ":" + String(_PID_output, 2);
   return data;
 }

@@ -8,7 +8,7 @@
 // Define function pointer types for hardware abstraction:
 typedef void (*MotorWriteFunc)(int16_t speed);
 typedef void (*MotorBrakeFunc)();
-typedef int  (*EncoderReadFunc)();
+typedef int (*EncoderReadFunc)();
 typedef void (*EncoderWriteFunc)(int newPosition);
 
 /**
@@ -113,17 +113,19 @@ public:
 
   /**
    * Generates a string formatted for Serial Plotter.
+   * @param id Optional ID for the motor (default is -1 which means no ID).
+   *        This is useful for distinguishing between multiple motors in the plotter.
    * @return A comma-separated string of PID setpoint, input, and output.
    */
-  String getSerialPlotter();
+  String getSerialPlotter(int id = -1);
 
 private:
   // PID control variables:
   double _PID_setpoint, _PID_input, _PID_output;
-  uint8_t _PWM_output;         // Computed PWM value
-  uint8_t _pwm_skip;           // Minimum PWM to overcome low-power stall
-  uint8_t _maxPWM;             // Maximum allowable PWM value
-  uint8_t _position_accuracy;  // Tolerance for position accuracy
+  uint8_t _PWM_output;        // Computed PWM value
+  uint8_t _pwm_skip;          // Minimum PWM to overcome low-power stall
+  uint8_t _maxPWM;            // Maximum allowable PWM value
+  uint8_t _position_accuracy; // Tolerance for position accuracy
 
   // Function pointers for hardware abstraction:
   MotorWriteFunc motorWrite;
