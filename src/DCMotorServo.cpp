@@ -21,15 +21,10 @@ DCMotorServo::DCMotorServo(MotorWriteFunc mWrite, MotorBrakeFunc mBrake, Encoder
   myPID->SetMode(AUTOMATIC);
 }
 
-void DCMotorServo::setCurrentPosition(int new_position)
+void DCMotorServo::setCurrentPosition(long new_position)
 {
   encoderWrite(new_position);
   _PID_input = encoderRead();
-}
-
-void DCMotorServo::setAccuracy(unsigned int range)
-{
-  _position_accuracy = range;
 }
 
 bool DCMotorServo::setPWMSkip(uint8_t range)
@@ -40,6 +35,11 @@ bool DCMotorServo::setPWMSkip(uint8_t range)
     return true;
   }
   return false;
+}
+
+void DCMotorServo::setAccuracy(unsigned int range)
+{
+  _position_accuracy = range;
 }
 
 void DCMotorServo::setMaxPWM(uint8_t maxPWM)
@@ -58,22 +58,22 @@ bool DCMotorServo::finished()
   return abs(_PID_setpoint - _PID_input) < _position_accuracy && _PWM_output == 0;
 }
 
-void DCMotorServo::move(int new_rela_position)
+void DCMotorServo::move(long new_rela_position)
 {
   _PID_setpoint += new_rela_position;
 }
 
-void DCMotorServo::moveTo(int new_position)
+void DCMotorServo::moveTo(long new_position)
 {
   _PID_setpoint = new_position;
 }
 
-int DCMotorServo::getRequestedPosition()
+long DCMotorServo::getRequestedPosition()
 {
   return _PID_setpoint;
 }
 
-int DCMotorServo::getActualPosition()
+long DCMotorServo::getActualPosition()
 {
   return encoderRead();
 }

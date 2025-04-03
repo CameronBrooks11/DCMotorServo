@@ -8,8 +8,8 @@
 // Define function pointer types for hardware abstraction:
 typedef void (*MotorWriteFunc)(int16_t speed);
 typedef void (*MotorBrakeFunc)();
-typedef int (*EncoderReadFunc)();
-typedef void (*EncoderWriteFunc)(int newPosition);
+typedef long (*EncoderReadFunc)();
+typedef void (*EncoderWriteFunc)(long newPosition);
 
 /**
  * @class DCMotorServo
@@ -46,25 +46,25 @@ public:
    * Moves the motor to a new relative position.
    * @param new_rela_position The relative position to add to the current target.
    */
-  void move(int new_rela_position);
+  void move(long new_rela_position);
 
   /**
    * Moves the motor to an absolute position.
    * @param new_position The target position.
    */
-  void moveTo(int new_position);
+  void moveTo(long new_position);
 
   /**
    * Retrieves the current target position.
    * @return The motor's target position.
    */
-  int getRequestedPosition();
+  long getRequestedPosition();
 
   /**
    * Retrieves the actual current position from the encoder.
    * @return The current encoder reading.
    */
-  int getActualPosition();
+  long getActualPosition();
 
   /**
    * Checks if the motor has reached its target position within defined accuracy.
@@ -103,7 +103,7 @@ public:
    * Sets the current encoder position.
    * @param new_position The new encoder position.
    */
-  void setCurrentPosition(int new_position);
+  void setCurrentPosition(long new_position);
 
   /**
    * Provides debugging information.
