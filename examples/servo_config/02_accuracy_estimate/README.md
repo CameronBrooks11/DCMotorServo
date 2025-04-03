@@ -1,5 +1,7 @@
 # Accuracy Estimate Tuning Procedure
 
+This is an estimate to start from, then tune your PID controller on your application then you can iteratively decrease the accuracy until it oscillates to achieve smaller setpoint error.
+
 ## Algorithm
 
 ### Initialization
