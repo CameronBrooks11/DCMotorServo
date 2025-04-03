@@ -23,7 +23,7 @@ const int MAX_PWM = 255;                         // Full speed
 const int INIT_ACCURACY = 10;                    // Initial accuracy threshold (adjust as needed)
 const int targetSteps = 5000;                    // Target steps for the motor to reach
 const unsigned long STABILIZATION_PERIOD = 3000; // Time (ms) for stabilization control once target is passed
-const int TRIALS_PER_ACCURACY = 3;               // Number of consecutive successful stabilization trials required per accuracy level
+const int TRIALS_PER_ACCURACY = 5;               // Number of consecutive successful stabilization trials required per accuracy level
 const unsigned long SYSTEM_DELAY = 2;            // Control update interval in ms to reflect the expected system delay
 
 // ----- Global Variables for Tuning -----
@@ -61,17 +61,19 @@ void loop()
     // Stabilization trials with bang-bang control.
     Serial.println("Starting stabilization trials...");
     int successCount = 0;
+    int errorCount = 0;
     bool anyTrialSuccess = false; // Track if any trial succeeded
-    while (successCount < TRIALS_PER_ACCURACY)
+
+    for (int i = 0; i < TRIALS_PER_ACCURACY; i++)
     {
         // Reset encoder for this trial.
         myEncoder.write(0);
 
         // Run stabilization control for a fixed period.
-        unsigned long stabStart = millis();
+        unsigned long stabilizeStart = millis();
         unsigned long lastSerialPrintTime = millis(); // For non-blocking Serial printing.
         unsigned long lastControlTime = millis();     // For SYSTEM_DELAY control updates.
-        while (millis() - stabStart < STABILIZATION_PERIOD)
+        while (millis() - stabilizeStart < STABILIZATION_PERIOD)
         {
             pos = myEncoder.read();
 
@@ -108,25 +110,26 @@ void loop()
         if (finalError <= currentAccuracy)
         {
             successCount++;
-            anyTrialSuccess = true;
-            Serial.print("Trial successful. Success count = ");
+            Serial.print("Trial successful. ");
             Serial.println(successCount);
         }
         else
         {
-            Serial.print("Trial failed; error = ");
+            errorCount++;
+            Serial.print("Trial failed. ");
             Serial.println(finalError);
-            successCount = 0; // Reset success count on failure.
         }
+        Serial.println("Successes: " + String(successCount) + ", Failures: " + String(errorCount));
     }
 
     // If all trials failed at this accuracy, end the procedure.
-    if (!anyTrialSuccess)
+    if (errorCount >= successCount)
+
     {
-        Serial.println("Stabilization failed for all trials at current accuracy.");
+        Serial.println("Stabilization failed at current accuracy.");
         Serial.print("Final achieved accuracy: ");
         Serial.println(currentAccuracy);
-        motorDriver.brake();
+        motorDriver.write(0); // Release the motor and allow it to stop.
         while (1)
             ; // Halt execution.
     }
