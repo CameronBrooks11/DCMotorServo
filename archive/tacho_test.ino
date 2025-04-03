@@ -1,5 +1,5 @@
 /*
- * Example: DCMotorTacho with LMD18200 driver for Speed Control
+ * Example: DCMotorTacho_Legacy with LMD18200 driver for Speed Control
  *
  * LMD18200 Motor Driver Pin Assignment:
  *   PWM: 6, DIR: 7, BRAKE: 8
@@ -10,7 +10,7 @@
 #include <Arduino.h>
 #include <Encoder.h>
 #include "LMD18200.h"
-#include "DCMotorTacho.h"
+#include "DCMotorTacho_Legacy.h"
 
 // Define motor and encoder pins
 #define MOTOR_PWM_PIN 6
@@ -52,8 +52,8 @@ void encoderWriteFunc(long newPosition)
 #define ENCODER_RESOLUTION (PPR * GEAR_RATIO)
 #define CPR (ENCODER_RESOLUTION * 4 * EMPIRICAL_FUDGE_FACTOR) // counts per revolution
 
-// Create an instance of DCMotorTacho using the function pointers and physical parameters
-DCMotorTacho tacho(lmdMotorWrite, lmdMotorBrake, encoderReadFunc, encoderWriteFunc, CPR, 50);
+// Create an instance of DCMotorTacho_Legacy using the function pointers and physical parameters
+DCMotorTacho_Legacy tacho(lmdMotorWrite, lmdMotorBrake, encoderReadFunc, encoderWriteFunc, CPR, 50);
 
 // PID parameters for tuning (for position control underlying speed control)
 float KP = 0.15, KI = 0.00, KD = 0.001;
@@ -78,7 +78,7 @@ void setup()
     // Set initial desired speed
     tacho.setSpeedRPM(desiredRPM);
 
-    Serial.println("DCMotorTacho Example (Speed Control)");
+    Serial.println("DCMotorTacho_Legacy Example (Speed Control)");
     Serial.println("Setpoint, Input, Output, Measured Speed (RPM)");
 }
 

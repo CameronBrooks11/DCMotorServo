@@ -1,5 +1,5 @@
 /*
- * Example: DCMotorTacho2 (Cascaded Speed Control) with LMD18200 driver
+ * Example: DCMotorTacho (Cascaded Speed Control) with LMD18200 driver
  *
  * LMD18200 Motor Driver Pin Assignment:
  *   PWM: 6, DIR: 7, BRAKE: 8
@@ -13,7 +13,7 @@
 
 #include "LMD18200.h"
 #include "DCMotorServo.h"
-#include "DCMotorTacho2.h"
+#include "DCMotorTacho.h"
 
 // Define motor and encoder pins.
 #define MOTOR_PWM_PIN 6
@@ -58,9 +58,9 @@ DCMotorServo servo(lmdMotorWrite, lmdMotorBrake, encoderReadFunc, encoderWriteFu
 #define ENCODER_RESOLUTION (PPR * GEAR_RATIO)
 #define CPR (ENCODER_RESOLUTION * 4 * EMPIRICAL_FUDGE_FACTOR)
 
-// Create an instance of DCMotorTacho2.
+// Create an instance of DCMotorTacho.
 // For inner PID (speed control), we use inner PID tunings (example values).
-DCMotorTacho2 tacho(&servo, CPR, 20); // speedInterval = 20 ms
+DCMotorTacho tacho(&servo, CPR, 20); // speedInterval = 20 ms
 
 // Outer loop PID tunings (position control) for the underlying servo.
 float outerKp = 0.15, outerKi = 0.00, outerKd = 0.001;
@@ -82,7 +82,7 @@ void setup()
     tacho.setSpeedRPM(0);
     tacho.setSpeedPIDTunings(innerKp, innerKi, innerKd);
 
-    Serial.println("DCMotorTacho2 (Cascaded Speed Control) Example");
+    Serial.println("DCMotorTacho (Cascaded Speed Control) Example");
     Serial.println("Format: {Outer: Setpoint,Input,Output} | MeasuredSpeedRPM | DesiredSpeedRPM");
 }
 

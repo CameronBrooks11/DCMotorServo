@@ -1,6 +1,5 @@
 # TODO
 
-- archive DCMotorTacho
 - complete servo_config:
   - PID tuning
 - complete tacho_config:

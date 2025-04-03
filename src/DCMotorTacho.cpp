@@ -1,23 +1,40 @@
 #include "DCMotorTacho.h"
 #include <Arduino.h>
 
-DCMotorTacho::DCMotorTacho(MotorWriteFunc mWrite, MotorBrakeFunc mBrake, EncoderReadFunc eRead, EncoderWriteFunc eWrite,
-                           double cpr, unsigned long speedInterval)
-    : DCMotorServo(mWrite, mBrake, eRead, eWrite),
-      _desiredSpeedRPM(0),
-      _CPR(cpr),
-      _speedInterval(speedInterval)
+DCMotorTacho::DCMotorTacho(DCMotorServo *servo, double cpr, unsigned long speedInterval)
+    : _servo(servo), _CPR(cpr), _speedInterval(speedInterval)
 {
-    unsigned long now = millis();
-    _lastSpeedUpdate = now;
-    _lastMeasureTime = now;
-    _lastMeasureCount = getActualPosition();
+    _desiredSpeedRPM = 0;
+    _speedPIDSetpoint = 0;
+    _speedPIDInput = 0;
+    _speedPIDOutput = 0;
     _measuredSpeedRPM = 0.0;
+    _lastSpeedUpdate = millis();
+    _lastEncoderCount = _servo->getActualPosition();
+
+    // Create inner PID for speed control.
+    // NOTE: We set output limits symmetrically to allow for negative outputs.
+    _speedPID = new PID(&_speedPIDInput, &_speedPIDOutput, &_speedPIDSetpoint, 0.1, 0.2, 0.1, DIRECT);
+    _speedPID->SetSampleTime(_speedInterval);
+    _speedPID->SetOutputLimits(-_CPR * 10, _CPR * 10); // Default limits: ±CPR*10 counts.
+    _speedPID->SetMode(AUTOMATIC);
 }
 
 void DCMotorTacho::setSpeedRPM(double rpm)
 {
     _desiredSpeedRPM = rpm;
+    _speedPIDSetpoint = rpm;
+    if (rpm == 0)
+    {
+        // If desired speed is zero, disable inner PID and engage brake.
+        _speedPID->SetMode(MANUAL);
+        _servo->stop();
+    }
+    else
+    {
+        // Otherwise, ensure the inner PID is in automatic mode.
+        _speedPID->SetMode(AUTOMATIC);
+    }
 }
 
 double DCMotorTacho::getDesiredSpeedRPM() const
@@ -25,45 +42,45 @@ double DCMotorTacho::getDesiredSpeedRPM() const
     return _desiredSpeedRPM;
 }
 
-void DCMotorTacho::updateSpeedControl()
+void DCMotorTacho::setSpeedPIDTunings(double Kp, double Ki, double Kd)
 {
-    unsigned long currentTime = millis();
-    unsigned long dt = currentTime - _lastSpeedUpdate;
-    if (dt >= _speedInterval)
-    {
-        // Calculate the incremental counts to add to the setpoint.
-        // desired RPM means (desired RPM/60000) rotations per ms.
-        // Multiply by dt to get rotations over dt, then by CPR to get counts.
-        double deltaCounts = (_desiredSpeedRPM * dt / 60000.0) * _CPR;
-        // Update the setpoint using the inherited move() method (adds deltaCounts to _PID_setpoint)
-        move((long)deltaCounts);
-        _lastSpeedUpdate = currentTime;
-    }
-}
-
-void DCMotorTacho::updateMeasuredSpeed()
-{
-    unsigned long currentTime = millis();
-    unsigned long dt = currentTime - _lastMeasureTime;
-    if (dt >= _speedInterval)
-    {
-        long currentCount = getActualPosition();
-        // Compute measured speed in RPM:
-        // (delta counts / CPR) gives rotations during dt ms. Multiply by 60000/dt to get RPM.
-        _measuredSpeedRPM = ((double)(currentCount - _lastMeasureCount) / _CPR) * (60000.0 / dt);
-        _lastMeasureCount = currentCount;
-        _lastMeasureTime = currentTime;
-    }
-}
-
-void DCMotorTacho::runSpeed()
-{
-    updateSpeedControl();
-    updateMeasuredSpeed();
-    run(); // call base class PID loop run()
+    _speedPID->SetTunings(Kp, Ki, Kd);
 }
 
 double DCMotorTacho::getMeasuredSpeedRPM() const
 {
     return _measuredSpeedRPM;
+}
+
+void DCMotorTacho::run()
+{
+    // If desired speed is zero, ensure inner PID is off and stop motor.
+    if (_desiredSpeedRPM == 0)
+    {
+        _speedPID->SetMode(MANUAL);
+        _servo->stop();
+        return;
+    }
+
+    unsigned long currentTime = millis();
+    unsigned long dt = currentTime - _lastSpeedUpdate;
+    if (dt >= _speedInterval)
+    {
+        long currentCount = _servo->getActualPosition();
+        // Calculate measured speed in RPM.
+        _measuredSpeedRPM = ((double)(currentCount - _lastEncoderCount) / _CPR) * (60000.0 / dt);
+        _speedPIDInput = _measuredSpeedRPM;
+        _speedPID->Compute();
+        // Inner PID output (in counts) is added to the outer loop setpoint.
+        _servo->move((long)_speedPIDOutput);
+        _lastEncoderCount = currentCount;
+        _lastSpeedUpdate = currentTime;
+    }
+    // Execute the outer (position) loop.
+    _servo->run();
+}
+
+DCMotorServo *DCMotorTacho::getServo() const
+{
+    return _servo;
 }

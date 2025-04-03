@@ -2,73 +2,66 @@
 #define DCMotorTacho_h
 
 #include "DCMotorServo.h"
+#include <PID_v1.h>
+#include <Arduino.h>
 
 /**
  * @class DCMotorTacho
- * @brief A subclass of DCMotorServo for speed control using tachometer feedback.
+ * @brief A cascaded speed-control layer that wraps a DCMotorServo object.
  *
- * This class inherits the PID/position control functionality from DCMotorServo and adds a layer
- * that integrates a desired speed command (in RPM) into a continuously updated position setpoint.
+ * This class implements a dual PID loop:
+ * - The inner (speed) loop compares the desired speed (RPM) to the measured speed (RPM)
+ *   and computes an output in encoder counts (delta setpoint).
+ * - The outer (position) loop is the existing PID loop in DCMotorServo,
+ *   which drives the motor so that the encoder count follows the moving setpoint.
+ *
+ * The inner PID output is limited by default to ±(CPR×10).
+ * If the desired speed is set to 0, the inner PID is disabled and the brake is engaged.
+ * Negative desired speeds are handled properly to reverse the motor direction.
  */
-class DCMotorTacho : public DCMotorServo
+class DCMotorTacho
 {
 public:
     /**
      * Constructor for DCMotorTacho.
-     * @param mWrite   Motor write function pointer.
-     * @param mBrake   Motor brake function pointer.
-     * @param eRead    Encoder read function pointer.
-     * @param eWrite   Encoder write function pointer.
-     * @param cpr      Counts per revolution (CPR) for the motor.
-     * @param speedInterval  Speed update interval in milliseconds.
+     * @param servo Pointer to an existing DCMotorServo object.
+     * @param cpr Counts per revolution (CPR) for the motor.
+     * @param speedInterval Speed update interval in ms (default 50).
      */
-    DCMotorTacho(MotorWriteFunc mWrite, MotorBrakeFunc mBrake, EncoderReadFunc eRead, EncoderWriteFunc eWrite,
-                 double cpr, unsigned long speedInterval = 50);
+    DCMotorTacho(DCMotorServo *servo, double cpr, unsigned long speedInterval = 50);
 
-    /**
-     * Set the desired speed (in RPM).
-     */
+    /// Set the desired speed in RPM.
     void setSpeedRPM(double rpm);
-
-    /**
-     * Get the desired speed (in RPM).
-     */
+    /// Get the desired speed (RPM).
     double getDesiredSpeedRPM() const;
-
-    /**
-     * Update the moving position setpoint based on the desired speed.
-     * This method integrates the speed command over the elapsed time.
-     */
-    void updateSpeedControl();
-
-    /**
-     * Update the measured speed based on encoder counts over a fixed interval.
-     */
-    void updateMeasuredSpeed();
-
-    /**
-     * Overloaded run method that updates speed control (both integration and measured speed)
-     * before executing the PID loop.
-     */
-    void runSpeed();
-
-    /**
-     * Get the most recently calculated measured speed (in RPM).
-     */
+    /// Set inner PID tunings for speed control.
+    void setSpeedPIDTunings(double Kp, double Ki, double Kd);
+    /// Get the most recently measured speed (RPM).
     double getMeasuredSpeedRPM() const;
+    /**
+     * Run the cascaded control loops (inner speed loop + outer position loop).
+     * If the desired speed is 0, inner PID is disabled and the motor is stopped.
+     */
+    void run();
+    /// Get a pointer to the underlying DCMotorServo.
+    DCMotorServo *getServo() const;
 
 private:
-    double _desiredSpeedRPM;      // Commanded speed (RPM)
-    double _CPR;                  // Encoder counts per revolution
-    unsigned long _speedInterval; // Interval (ms) for speed updates
+    DCMotorServo *_servo;         // Underlying position controller.
+    double _desiredSpeedRPM;      // Desired speed (RPM) command.
+    double _measuredSpeedRPM;     // Measured speed (RPM).
+    double _CPR;                  // Encoder counts per revolution.
+    unsigned long _speedInterval; // Speed update interval in ms.
 
-    // Variables for setpoint integration (speed control)
-    unsigned long _lastSpeedUpdate;
+    // Variables for speed measurement:
+    unsigned long _lastSpeedUpdate; // Timestamp of last inner loop update.
+    long _lastEncoderCount;         // Encoder count at last update.
 
-    // Variables for measured speed calculation
-    unsigned long _lastMeasureTime;
-    long _lastMeasureCount;
-    double _measuredSpeedRPM;
+    // Inner PID variables for speed control:
+    double _speedPIDInput;    // Measured speed (RPM)
+    double _speedPIDOutput;   // Inner PID output (delta encoder counts)
+    double _speedPIDSetpoint; // Desired speed (RPM) – should equal _desiredSpeedRPM.
+    PID *_speedPID;           // Inner PID controller.
 };
 
 #endif // DCMotorTacho_h
