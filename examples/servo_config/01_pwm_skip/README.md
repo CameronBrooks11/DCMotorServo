@@ -1,5 +1,7 @@
 # PWM Skip Tuning Procedure
 
+Upload the script and note the final output value. Monitor the temperature of your driver and remove power immediately if it gets excessively hot.
+
 ## Algorithm
 
 ### Initialization
