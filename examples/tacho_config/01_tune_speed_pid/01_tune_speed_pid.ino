@@ -1,31 +1,41 @@
-/*
- * Example: DCMotorTacho (Cascaded Speed Control) with LMD18200 driver
- *
- * LMD18200 Motor Driver Pin Assignment:
- *   PWM: 6, DIR: 7, BRAKE: 8
- * Encoder Pin Assignment:
- *   Channel B1: A2, Channel A1: A3
- */
-
 #include <Arduino.h>
-
 #include <Encoder.h>
-
-#include "LMD18200.h"
 #include "DCMotorServo.h"
 #include "DCMotorTacho.h"
 
-// Define motor and encoder pins.
-#define MOTOR_PWM_PIN 6
-#define MOTOR_DIR_PIN 7
-#define MOTOR_BRAKE_PIN 8
-#define ENCODER_PIN1 A2
+#define USE_LMD18500 1
+// #define USE_L298N 1
+
+// ----- LMD18500 Pin Definitions -----
+#ifdef USE_LMD18500
+#include "LMD18200.h"
+#define LMD_PWM_PIN 6
+#define LMD_DIR_PIN 7
+#define LMD_BRAKE_PIN 8
+#define ENCODER_PIN1 A2 // non-interrupt pins
 #define ENCODER_PIN2 A3
+#endif // USE_LMD18500
 
-// Create an instance of the LMD18200 motor driver.
-LMD18200 motorDriver(MOTOR_PWM_PIN, MOTOR_DIR_PIN, MOTOR_BRAKE_PIN);
+// ------- L298N Pin Definitions -------
+#ifdef USE_L298N
+#include "L298N.h"
+#define L298_ENA 6
+#define L298_IN1 7
+#define L298_IN2 8
+#define ENCODER_PIN1 2 // interrupt pins
+#define ENCODER_PIN2 3
+#endif // USE_L298N
 
-// Create an instance of the Encoder.
+// ----- Create Motor Instances -----
+#ifdef USE_LMD18500
+LMD18200 motorDriver(LMD_PWM_PIN, LMD_DIR_PIN, LMD_BRAKE_PIN);
+#endif // USE_LMD18500
+
+#ifdef USE_L298N
+L298N motorDriver(L298_ENA, L298_IN1, L298_IN2);
+#endif // USE_L298N
+
+// ----- Create Encoder Instance -----
 Encoder myEncoder(ENCODER_PIN1, ENCODER_PIN2);
 
 // Wrapper functions for the motor driver.
@@ -76,13 +86,13 @@ void setup()
     motorDriver.begin();
 
     // Configure the outer (position) PID controller.
-    servo.SetPIDTunings(outerKp, outerKi, outerKd);
+    servo.setPIDTunings(outerKp, outerKi, outerKd);
     servo.setPWMSkip(25);
     servo.setAccuracy(10);
     servo.setMaxPWM(255);
 
     tacho.setSpeedRPM(0);
-    tacho.setSpeedPIDTunings(innerKp, innerKi, innerKd);
+    tacho.setPIDTunings(innerKp, innerKi, innerKd);
 
     Serial.println("DCMotorTacho (Cascaded Speed Control) Example");
     Serial.println("Format: {Outer: Setpoint,Input,Output} | MeasuredSpeedRPM | DesiredSpeedRPM");
@@ -123,7 +133,7 @@ void loop()
         else if (command.startsWith("SPEEDKP="))
         {
             double kp = command.substring(8).toFloat();
-            tacho.setSpeedPIDTunings(kp, innerKi, innerKd);
+            tacho.setPIDTunings(kp, innerKi, innerKd);
             innerKp = kp;
             Serial.print("Inner PID Kp set to: ");
             Serial.println(kp);
@@ -131,7 +141,7 @@ void loop()
         else if (command.startsWith("SPEEDKI="))
         {
             double ki = command.substring(8).toFloat();
-            tacho.setSpeedPIDTunings(innerKp, ki, innerKd);
+            tacho.setPIDTunings(innerKp, ki, innerKd);
             innerKi = ki;
             Serial.print("Inner PID Ki set to: ");
             Serial.println(ki);
@@ -139,7 +149,7 @@ void loop()
         else if (command.startsWith("SPEEDKD="))
         {
             double kd = command.substring(8).toFloat();
-            tacho.setSpeedPIDTunings(innerKp, innerKi, kd);
+            tacho.setPIDTunings(innerKp, innerKi, kd);
             innerKd = kd;
             Serial.print("Inner PID Kd set to: ");
             Serial.println(kd);
@@ -165,6 +175,10 @@ void loop()
             servo.myPID->SetTunings(outerKp, outerKi, outerKd);
             Serial.print("Outer PID Kd set to: ");
             Serial.println(outerKd);
+        } else if (command.startsWith("STOP"))
+        {
+            tacho.stop();
+            Serial.println("Motor stopped.");
         }
         else
         {

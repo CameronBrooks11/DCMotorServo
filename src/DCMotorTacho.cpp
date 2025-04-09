@@ -42,7 +42,7 @@ double DCMotorTacho::getDesiredSpeedRPM() const
     return _desiredSpeedRPM;
 }
 
-void DCMotorTacho::setSpeedPIDTunings(double Kp, double Ki, double Kd)
+void DCMotorTacho::setPIDTunings(double Kp, double Ki, double Kd)
 {
     _speedPID->SetTunings(Kp, Ki, Kd);
 }
@@ -78,6 +78,16 @@ void DCMotorTacho::run()
     }
     // Execute the outer (position) loop.
     _servo->run();
+}
+
+/**
+ *  Stops the motor and disables the inner PID controller.
+ */
+void DCMotorTacho::stop()
+{
+    _speedPIDOutput = _desiredSpeedRPM = _speedPIDSetpoint = 0;
+    _servo->stop();
+    _speedPID->SetMode(MANUAL);
 }
 
 DCMotorServo *DCMotorTacho::getServo() const

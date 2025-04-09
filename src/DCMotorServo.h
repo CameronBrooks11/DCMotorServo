@@ -91,7 +91,7 @@ public:
    * @param Ki Integral gain.
    * @param Kd Derivative gain.
    */
-  void SetPIDTunings(double Kp, double Ki, double Kd);
+  void setPIDTunings(double Kp, double Ki, double Kd);
 
   /**
    * Sets the tolerance for position accuracy.

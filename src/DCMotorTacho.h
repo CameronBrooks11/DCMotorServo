@@ -35,7 +35,7 @@ public:
     /// Get the desired speed (RPM).
     double getDesiredSpeedRPM() const;
     /// Set inner PID tunings for speed control.
-    void setSpeedPIDTunings(double Kp, double Ki, double Kd);
+    void setPIDTunings(double Kp, double Ki, double Kd);
     /// Get the most recently measured speed (RPM).
     double getMeasuredSpeedRPM() const;
     /**
@@ -43,6 +43,9 @@ public:
      * If the desired speed is 0, inner PID is disabled and the motor is stopped.
      */
     void run();
+
+    /// Stop the motor and disable the inner PID.
+    void stop();
     /// Get a pointer to the underlying DCMotorServo.
     DCMotorServo *getServo() const;
 
