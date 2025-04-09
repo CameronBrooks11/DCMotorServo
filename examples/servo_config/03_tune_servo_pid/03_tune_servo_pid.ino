@@ -1,76 +1,71 @@
-/*
- * Example: DCMotorServo with LMD18200 driver
- *
- * LMD18200 Motor Driver Pin Assignment:
- *   PWM: 6, DIR: 7, BRAKE: 8
- * Encoder Pin Assignment:
- *   Channel B1: A2, Channel A1: A3
- */
-
 #include <Arduino.h>
 #include <Encoder.h>
-#include "LMD18200.h"
 #include "DCMotorServo.h"
 
-// Define the motor and encoder pins
-#define MOTOR_PWM_PIN 6
-#define MOTOR_DIR_PIN 7
-#define MOTOR_BRAKE_PIN 8
-#define ENCODER_PIN1 A2
+#define USE_LMD18500 1
+// #define USE_L298N 1
+
+// ----- LMD18500 Pin Definitions -----
+#ifdef USE_LMD18500
+#include "LMD18200.h"
+#define LMD_PWM_PIN 6
+#define LMD_DIR_PIN 7
+#define LMD_BRAKE_PIN 8
+#define ENCODER_PIN1 A2 // non-interrupt pins
 #define ENCODER_PIN2 A3
+#endif // USE_LMD18500
 
-/*
-// First motor driver example
-#define MOTOR_PWM_PIN 6
-#define MOTOR_DIR_PIN 7
-#define MOTOR_BRAKE_PIN 8
-#define ENCODER_PIN1 A2
-#define ENCODER_PIN2 A3
-*/
-/*
-// Second motor driver example
-#define MOTOR_PWM_PIN 11
-#define MOTOR_DIR_PIN 10
-#define MOTOR_BRAKE_PIN 12
-#define ENCODER_PIN1 A0
-#define ENCODER_PIN2 A1
-*/
+// ------- L298N Pin Definitions -------
+#ifdef USE_L298N
+#include "L298N.h"
+#define L298_ENA 6
+#define L298_IN1 7
+#define L298_IN2 8
+#define ENCODER_PIN1 2 // interrupt pins
+#define ENCODER_PIN2 3
+#endif // USE_L298N
 
-// Create an instance of the LMD18200 motor driver
-LMD18200 motorDriver(MOTOR_PWM_PIN, MOTOR_DIR_PIN, MOTOR_BRAKE_PIN);
+// ----- Create Motor Instances -----
+#ifdef USE_LMD18500
+LMD18200 motorDriver(LMD_PWM_PIN, LMD_DIR_PIN, LMD_BRAKE_PIN);
+#endif // USE_LMD18500
 
-// Create an instance of the Encoder
+#ifdef USE_L298N
+L298N motorDriver(L298_ENA, L298_IN1, L298_IN2);
+#endif // USE_L298N
+
+// ----- Create Encoder Instance -----
 Encoder myEncoder(ENCODER_PIN1, ENCODER_PIN2);
 
+// PID parameters for motor servo object
+float KP = 0.1;
+float KI = 0.15;
+float KD = 0.05;
+
 // Wrapper functions for the motor driver
-void lmdMotorWrite(int16_t speed)
+void wrapMotorWrite(int16_t speed)
 {
     motorDriver.write(speed);
 }
 
-void lmdMotorBrake()
+void wrapMotorBrake()
 {
     motorDriver.brake();
 }
 
 // Wrapper functions for the encoder
-int encoderReadFunc()
+long wrapEncoderRead()
 {
     return myEncoder.read();
 }
 
-void encoderWriteFunc(int newPosition)
+void wrapEncoderWrite(long newPosition)
 {
     myEncoder.write(newPosition);
 }
 
 // Create an instance of DCMotorServo using the function pointers
-DCMotorServo servo(lmdMotorWrite, lmdMotorBrake, encoderReadFunc, encoderWriteFunc);
-
-// PID parameters for tuning
-float KP = 0.1;
-float KI = 0.15;
-float KD = 0.05;
+DCMotorServo servo(wrapMotorWrite, wrapMotorBrake, wrapEncoderRead, wrapEncoderWrite);
 
 void setup()
 {
@@ -81,9 +76,9 @@ void setup()
 
     // Configure the PID controller
     servo.myPID->SetTunings(KP, KI, KD);
-    servo.setPWMSkip(25);
-    servo.setAccuracy(14);
-    servo.setMaxPWM(200);
+    servo.setPWMSkip(35);
+    servo.setAccuracy(8);
+    servo.setMaxPWM(255);
 
     Serial.println("DCMotorServo with LMD18200 Example");
     Serial.println("Setpoint,Input,Output");
@@ -132,7 +127,7 @@ void loop()
         }
         else if (command.startsWith("MOVE="))
         {
-            int newPosition = command.substring(5).toInt();
+            long newPosition = command.substring(5).toInt();
             if (newPosition != 0)
             {
                 servo.move(newPosition);

@@ -16,8 +16,6 @@
 #define L298_ENA 3
 #define L298_IN1 4
 #define L298_IN2 5
-
-// Define encoder pins
 #define ENCODER_PIN1 A2
 #define ENCODER_PIN2 A3
 
@@ -39,12 +37,12 @@ void l298MotorBrake()
 }
 
 // Wrapper functions for the encoder
-int encoderReadFunc()
+long encoderReadFunc()
 {
     return myEncoder.read();
 }
 
-void encoderWriteFunc(int newPosition)
+void encoderWriteFunc(long newPosition)
 {
     myEncoder.write(newPosition);
 }
@@ -117,7 +115,7 @@ void loop()
         }
         else if (command.startsWith("MOVE="))
         {
-            int newPosition = command.substring(5).toInt();
+            long newPosition = command.substring(5).toInt();
             if (newPosition != 0)
             {
                 servo.move(newPosition);
@@ -131,7 +129,7 @@ void loop()
         }
         else if (command.startsWith("MAXPWM="))
         {
-            int maxPWM = command.substring(7).toInt();
+            long maxPWM = command.substring(7).toInt();
             if (maxPWM >= 0 && maxPWM <= 255)
             {
                 servo.setMaxPWM(maxPWM);

@@ -1,27 +1,45 @@
-/*
- * PWM Skip Tuning Procedure
- *
- * LMD18200 Motor Driver Pin Assignment:
- *   PWM: 6, DIR: 7, BRAKE: 8
- * Encoder Pin Assignment:
- *   Channel B1: A2, Channel A1: A3
- */
-
 #include <Arduino.h>
 #include <Encoder.h>
-#include "LMD18200.h"
 
-// ----- Pin Definitions -----
-#define MOTOR_PWM_PIN 6
-#define MOTOR_DIR_PIN 7
-#define MOTOR_BRAKE_PIN 8
-#define ENCODER_PIN1 A2
+#define USE_LMD18500 1
+// #define USE_L298N 1
+
+// ----- LMD18500 Pin Definitions -----
+#ifdef USE_LMD18500
+#include "LMD18200.h"
+#define LMD_PWM_PIN 6
+#define LMD_DIR_PIN 7
+#define LMD_BRAKE_PIN 8
+#define ENCODER_PIN1 A2 // non-interrupt pins
 #define ENCODER_PIN2 A3
+#endif // USE_LMD18500
+
+// ------- L298N Pin Definitions -------
+#ifdef USE_L298N
+#include "L298N.h"
+#define L298_ENA 6
+#define L298_IN1 7
+#define L298_IN2 8
+#define ENCODER_PIN1 2 // interrupt pins
+#define ENCODER_PIN2 3
+#endif // USE_L298N
+
+// ----- Create Motor Instances -----
+#ifdef USE_LMD18500
+LMD18200 motorDriver(LMD_PWM_PIN, LMD_DIR_PIN, LMD_BRAKE_PIN);
+#endif // USE_LMD18500
+
+#ifdef USE_L298N
+L298N motorDriver(L298_ENA, L298_IN1, L298_IN2);
+#endif // USE_L298N
+
+// ----- Create Encoder Instance -----
+Encoder myEncoder(ENCODER_PIN1, ENCODER_PIN2);
 
 // ----- Tuning Constants -----
 const unsigned long INIT_PWM_RAMP_INTERVAL = 400; // Initial interval (ms) between PWM increments
-const int MOVE_STEPS_SENSITIVITY = 5;              // Minimum encoder steps to consider as movement
-const int MAX_PWM = 255;                           // Maximum PWM value
+const int MOVE_STEPS_SENSITIVITY = 5;             // Minimum encoder steps to consider as movement
+const int MAX_PWM = 255;                          // Maximum PWM value
 
 // ----- Global Variables for Tuning -----
 unsigned long pwmRampInterval; // Current PWM ramp interval
@@ -33,10 +51,6 @@ int pwmEstimate0;              // PWM value recorded when movement is first dete
 // Timers for independent branches
 unsigned long lastPWMUpdateTime = 0;
 unsigned long lastEncoderCheckTime = 0;
-
-// ----- Create Instances -----
-LMD18200 motorDriver(MOTOR_PWM_PIN, MOTOR_DIR_PIN, MOTOR_BRAKE_PIN);
-Encoder myEncoder(ENCODER_PIN1, ENCODER_PIN2);
 
 void serialPrintResults()
 {
@@ -91,7 +105,7 @@ void loop()
             ; // Halt execution
     }
 
-    int encoderMovement = abs(myEncoder.read());
+    long encoderMovement = abs(myEncoder.read());
     if (encoderMovement >= MOVE_STEPS_SENSITIVITY)
     {
         // Significant movement detected.

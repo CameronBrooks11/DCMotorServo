@@ -37,12 +37,12 @@ void lmdMotorBrake()
 }
 
 // Wrapper functions for the encoder
-int encoderReadFunc()
+long encoderReadFunc()
 {
     return myEncoder.read();
 }
 
-void encoderWriteFunc(int newPosition)
+void encoderWriteFunc(long newPosition)
 {
     myEncoder.write(newPosition);
 }
@@ -213,7 +213,7 @@ void serialIO()
         }
         else if (command.startsWith("MOVE="))
         {
-            int newPosition = command.substring(5).toInt();
+            long newPosition = command.substring(5).toInt();
             if (newPosition != 0)
             {
                 servo.move(newPosition);
@@ -241,7 +241,7 @@ void serialIO()
         }
         else if (command.startsWith("MOVEROTATE="))
         {
-            int numRotations = command.substring(11).toInt();
+            long numRotations = command.substring(11).toInt();
             if (numRotations != 0)
             {
                 servo.move(numRotations * CPR);

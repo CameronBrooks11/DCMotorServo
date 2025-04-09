@@ -15,22 +15,18 @@
 #include "DCMotorServo.h"
 
 // Define motor driver pins for L298N channel 1
-#define L298_ENA 3
-#define L298_IN1 4
-#define L298_IN2 5
-
-// Define encoder pins channel 1
-#define ENCODER_PINA1 A0
-#define ENCODER_PINA2 A1
+#define L298_ENA 6
+#define L298_IN1 8
+#define L298_IN2 7
+#define ENCODER_PINA1 2
+#define ENCODER_PINA2 4
 
 // Define motor driver pins for L298N channel 2
-#define L298_ENB 6
-#define L298_IN3 7
-#define L298_IN4 8
-
-// Define encoder pins channel 2
-#define ENCODER_PINB1 A2
-#define ENCODER_PINB2 A3
+#define L298_ENB 9
+#define L298_IN3 10
+#define L298_IN4 11
+#define ENCODER_PINB1 3
+#define ENCODER_PINB2 5
 
 // Create two instances of the L298N motor driver
 L298N l298Motor1(L298_ENA, L298_IN1, L298_IN2);
@@ -49,11 +45,11 @@ void l298Motor1Brake()
 {
     l298Motor1.brake();
 }
-int encoder1ReadFunc()
+long encoder1ReadFunc()
 {
     return encoder1.read();
 }
-void encoder1WriteFunc(int newPosition)
+void encoder1WriteFunc(long newPosition)
 {
     encoder1.write(newPosition);
 }
@@ -65,11 +61,11 @@ void l298Motor2Brake()
 {
     l298Motor2.brake();
 }
-int encoder2ReadFunc()
+long encoder2ReadFunc()
 {
     return encoder2.read();
 }
-void encoder2WriteFunc(int newPosition)
+void encoder2WriteFunc(long newPosition)
 {
     encoder2.write(newPosition);
 }
@@ -137,7 +133,7 @@ void loop()
         command.trim();
         if (command.startsWith("MOVE1="))
         {
-            int newPosition = command.substring(6).toInt(); // Changed from substring(5) to substring(6)
+            long newPosition = command.substring(6).toInt(); // Changed from substring(5) to substring(6)
             if (newPosition != 0)
             {
                 servo1.move(newPosition);
@@ -151,7 +147,7 @@ void loop()
         }
         else if (command.startsWith("MOVE2="))
         {
-            int newPosition = command.substring(6).toInt(); // Changed from substring(5) to substring(6)
+            long newPosition = command.substring(6).toInt(); // Changed from substring(5) to substring(6)
             if (newPosition != 0)
             {
                 servo2.move(newPosition);

@@ -58,11 +58,13 @@ DCMotorServo servo(lmdMotorWrite, lmdMotorBrake, encoderReadFunc, encoderWriteFu
 #define ENCODER_RESOLUTION (PPR * GEAR_RATIO)
 #define CPR (ENCODER_RESOLUTION * 4 * EMPIRICAL_FUDGE_FACTOR)
 
-// Create an instance of DCMotorTacho.
-// For inner PID (speed control), we use inner PID tunings (example values).
-DCMotorTacho tacho(&servo, CPR, 20); // speedInterval = 20 ms
+#define SPEED_INTERVAL 20 // ms
 
-// Outer loop PID tunings (position control) for the underlying servo.
+// Create an instance of DCMotorTacho.
+// For inner PID (speed control)
+DCMotorTacho tacho(&servo, CPR, SPEED_INTERVAL);
+
+// Outer loop PID tunings (position control) for the underlying servo, see servo_config for determining these.
 float outerKp = 0.15, outerKi = 0.00, outerKd = 0.001;
 // Inner loop PID tunings (speed control) will be adjusted via serial commands.
 float innerKp = 0.6, innerKi = 0.2, innerKd = 0.01;

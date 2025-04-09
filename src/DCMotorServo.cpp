@@ -45,7 +45,7 @@ void DCMotorServo::setAccuracy(unsigned int range)
 void DCMotorServo::setMaxPWM(uint8_t maxPWM)
 {
   _maxPWM = maxPWM;
-  myPID->SetOutputLimits(_pwm_skip - _maxPWM, _maxPWM - _pwm_skip);
+  myPID->SetOutputLimits(_pwm_skip - _maxPWM, _maxPWM - _pwm_skip); // pwm_skip is added to the output in run()
 }
 
 void DCMotorServo::SetPIDTunings(double Kp, double Ki, double Kd)

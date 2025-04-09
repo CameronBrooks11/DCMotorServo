@@ -46,11 +46,11 @@ void lmdMotor1Brake()
 {
     motor1.brake();
 }
-int encoder1ReadFunc()
+long encoder1ReadFunc()
 {
     return encoder1.read();
 }
-void encoder1WriteFunc(int newPosition)
+void encoder1WriteFunc(long newPosition)
 {
     encoder1.write(newPosition);
 }
@@ -64,11 +64,11 @@ void lmdMotor2Brake()
 {
     motor2.brake();
 }
-int encoder2ReadFunc()
+long encoder2ReadFunc()
 {
     return encoder2.read();
 }
-void encoder2WriteFunc(int newPosition)
+void encoder2WriteFunc(long newPosition)
 {
     encoder2.write(newPosition);
 }
@@ -132,7 +132,7 @@ void loop()
 
         if (command.startsWith("MOVE1="))
         {
-            int newPosition = command.substring(6).toInt();
+            long newPosition = command.substring(6).toInt();
             if (newPosition != 0)
             {
                 servo1.move(newPosition);
@@ -146,7 +146,7 @@ void loop()
         }
         else if (command.startsWith("MOVE2="))
         {
-            int newPosition = command.substring(6).toInt();
+            long newPosition = command.substring(6).toInt();
             if (newPosition != 0)
             {
                 servo2.move(newPosition);
