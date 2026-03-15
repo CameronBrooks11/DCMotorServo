@@ -1,0 +1,30 @@
+{
+    "name": "DCMotorServo",
+    "version": "1.0.0",
+    "description": "Driver-agnostic DC motor position and speed control using PID and quadrature encoder feedback. Supports any motor driver via function pointers. Includes a cascaded speed-control layer (DCMotorTacho) for RPM-based control.",
+    "keywords": ["motor", "dc-motor", "pid", "encoder", "servo", "speed-control", "h-bridge"],
+    "authors": [
+        {
+            "name": "Cameron K. Brooks",
+            "email": "cambrooks3393@gmail.com",
+            "maintainer": true
+        }
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/CameronBrooks11/DCMotorServo"
+    },
+    "license": "MIT",
+    "frameworks": "arduino",
+    "platforms": "*",
+    "dependencies": [
+        {
+            "name": "PID",
+            "owner": "br3ttb"
+        },
+        {
+            "name": "Encoder",
+            "owner": "paulstoffregen"
+        }
+    ]
+}
