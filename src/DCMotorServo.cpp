@@ -290,6 +290,10 @@ void DCMotorServo::run()
   if ((error < 0 && endstopMin != nullptr && endstopMin()) ||
       (error > 0 && endstopMax != nullptr && endstopMax()))
   {
+    // Pull the unreachable target to the held position. Otherwise a caller
+    // (or DCMotorTacho's speed loop) could keep winding the setpoint past the
+    // stop, storing up an uncommanded lunge for the moment the switch releases.
+    _PID_setpoint = _PID_input;
     haltMotor();
     return;
   }

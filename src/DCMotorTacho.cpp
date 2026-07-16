@@ -62,9 +62,11 @@ void DCMotorTacho::run()
     {
         _speedPID->SetMode(MANUAL);
         _speedPIDOutput = 0;
+        _servo->run(); // progress homing / hold the latched brake
+        // Sync AFTER run(): homing completion zeroes the encoder inside it,
+        // and a pre-run() count would fake a huge speed sample next cycle.
         _lastEncoderCount = _servo->getActualPosition();
         _lastSpeedUpdate = millis();
-        _servo->run(); // progress homing / hold the latched brake
         return;
     }
 

@@ -35,6 +35,10 @@ public:
 
   /**
    * Runs the PID controller and sends the computed output to the motor driver.
+   * Special modes take precedence over the PID: while homing this drives the
+   * homing move; while a stall fault is latched it does nothing (motor stays
+   * braked); while the target lies beyond a triggered endstop it holds the
+   * motor braked and pulls the target to the held position.
    */
   void run();
 
@@ -71,6 +75,9 @@ public:
 
   /**
    * Checks if the motor has reached its target position within defined accuracy.
+   * Always false while a homing move is in progress. A target blocked by a
+   * triggered endstop is pulled to the held position, so this reports true
+   * once the motor has gone as far as it can.
    * @return True if the motor is at the target position, false otherwise.
    */
   bool finished();
@@ -124,7 +131,9 @@ public:
   /**
    * Attaches physical endstop sensors (limit switch, hall effect, ...).
    * While a triggered endstop blocks the direction the target lies in, run()
-   * holds the motor braked; motion away from the endstop remains allowed.
+   * holds the motor braked and pulls the target to the held position (so a
+   * later switch release cannot cause an uncommanded move); motion away from
+   * the endstop remains allowed.
    * @param minStop Function returning true when the minimum-side endstop is triggered (or nullptr).
    * @param maxStop Function returning true when the maximum-side endstop is triggered (or nullptr).
    */
@@ -161,8 +170,10 @@ public:
    * Starts a non-blocking homing move: drives at a fixed PWM toward an extreme
    * until the matching endstop triggers or a stall is detected (whichever is
    * attached/enabled), then brakes and zeroes the encoder there. Software
-   * travel limits are bypassed during the move. Progressed by run(); poll
-   * isHoming() for completion and isHomed() for success. Cancelled by stop().
+   * travel limits are bypassed during the move, and any latched stall fault
+   * is cleared (a stall during homing marks the extreme, not a fault).
+   * Progressed by run(); poll isHoming() for completion and isHomed() for
+   * success. Cancelled by stop().
    * @param direction Negative for the minimum-side extreme, positive for maximum-side.
    * @param pwm Drive PWM during homing (clamped to [pwm_skip, maxPWM]).
    * @param max_travel Failsafe: abort (unhomed) after this many encoder counts

@@ -18,6 +18,8 @@
  * The inner PID output is limited by default to ±(CPR×10).
  * If the desired speed is set to 0, the inner PID is disabled and the brake is engaged.
  * Negative desired speeds are handled properly to reverse the motor direction.
+ * While the wrapped servo is homing or stall-latched, the speed loop is held
+ * so it cannot wind the position setpoint or cancel the homing move.
  */
 class DCMotorTacho
 {
@@ -41,6 +43,9 @@ public:
     /**
      * Run the cascaded control loops (inner speed loop + outer position loop).
      * If the desired speed is 0, inner PID is disabled and the motor is stopped.
+     * While the servo is homing or stall-latched, only the outer loop runs (the
+     * speed loop is suspended and its counters resynced); normal speed control
+     * resumes automatically afterwards.
      */
     void run();
 

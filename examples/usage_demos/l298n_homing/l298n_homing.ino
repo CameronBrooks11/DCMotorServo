@@ -147,9 +147,11 @@ void loop()
         }
         else if (command == "HOME")
         {
-            // Homing bypasses travel limits, so they can stay set
+            // Homing bypasses travel limits (they can stay set) and clears
+            // any latched stall fault, so HOME also works as stall recovery
             servo.startHoming(-1, 120, TRAVEL_COUNTS + TRAVEL_COUNTS / 4);
             homingReported = false;
+            stallReported = false;
             Serial.println("Re-homing...");
         }
         else

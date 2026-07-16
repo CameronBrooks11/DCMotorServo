@@ -77,7 +77,7 @@ Adds `delta` encoder counts to the current target (relative move).
 bool finished()
 ```
 
-Returns `true` when the encoder is within the accuracy window of the target and the PWM output is zero.
+Returns `true` when the encoder is within the accuracy window of the target and the PWM output is zero. Always `false` while a homing move is in progress. A target blocked by a triggered endstop is pulled to the held position, so `finished()` reports `true` once the motor has gone as far as it can.
 
 #### `getActualPosition()`
 
@@ -169,7 +169,7 @@ Removes the software travel limits.
 void attachEndstops(EndstopReadFunc minStop, EndstopReadFunc maxStop)
 ```
 
-Attaches physical endstop sensors (limit switch, hall effect, ...). Each is a `bool ()` function returning `true` when triggered; pass `nullptr` for a side with no sensor. While the target position lies beyond a triggered endstop, `run()` holds the motor braked; motion away from the endstop remains allowed. The hold is judged on the direction of the position error, so it is stable — the motor does not chatter against the switch.
+Attaches physical endstop sensors (limit switch, hall effect, ...). Each is a `bool ()` function returning `true` when triggered; pass `nullptr` for a side with no sensor. While the target position lies beyond a triggered endstop, `run()` holds the motor braked and pulls the target to the held position — nothing (including `DCMotorTacho`'s speed loop) can wind the setpoint past the stop, and a later switch release cannot cause an uncommanded move. Motion away from the endstop remains allowed; command a new target to move off the stop. The hold is judged on the direction of the position error, so it is stable — the motor does not chatter against the switch.
 
 #### `enableStallDetection(timeout_ms, min_counts)`
 
@@ -202,7 +202,7 @@ void clearStall()
 bool startHoming(int8_t direction, uint8_t pwm, long max_travel = 0)
 ```
 
-Starts a non-blocking homing move: drives at a fixed `pwm` (clamped to `[pwm_skip, maxPWM]`) toward an extreme — negative `direction` for the minimum side, positive for the maximum side — until the matching endstop triggers or a stall is detected, whichever is attached/enabled. Software travel limits are bypassed during the move. On success the motor brakes, the encoder is zeroed, and the setpoint is set to the (limit-clamped) zero. `max_travel` is a failsafe bound in encoder counts (e.g. against a dead endstop switch): exceeding it aborts the move *unhomed*, holding the current position; `0` means unbounded. Returns `false` if `direction` is `0` or if neither the matching endstop nor stall detection is available to detect the extreme. Progressed by `run()`; cancel with `stop()`.
+Starts a non-blocking homing move: drives at a fixed `pwm` (clamped to `[pwm_skip, maxPWM]`) toward an extreme — negative `direction` for the minimum side, positive for the maximum side — until the matching endstop triggers or a stall is detected, whichever is attached/enabled. Software travel limits are bypassed during the move, and any latched stall fault is cleared (a stall during homing marks the extreme, not a fault). On success the motor brakes, the encoder is zeroed, and the setpoint is set to the (limit-clamped) zero. `max_travel` is a failsafe bound in encoder counts (e.g. against a dead endstop switch): exceeding it aborts the move *unhomed*, holding the current position; `0` means unbounded. Returns `false` if `direction` is `0` or if neither the matching endstop nor stall detection is available to detect the extreme. Progressed by `run()`; cancel with `stop()`.
 
 #### `isHoming()` / `isHomed()`
 
