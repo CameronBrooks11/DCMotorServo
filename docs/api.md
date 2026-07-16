@@ -41,7 +41,7 @@ Direct access to the underlying [Arduino PID library](https://github.com/br3ttb/
 void run()
 ```
 
-Reads the encoder, computes PID output, and sends the result to the motor driver. **Call every loop iteration.** With the extrema features active, `run()` first services the special modes: while homing it drives the homing move instead of the PID (encoder input is not tracked into the PID); while a stall fault is latched it does nothing (motor stays braked); while the target lies beyond a triggered endstop it holds the motor braked.
+Reads the encoder, computes PID output, and sends the result to the motor driver. **Call every loop iteration.** With the extrema features active, `run()` first services the special modes: while homing it drives the homing move instead of the PID (encoder input is not tracked into the PID); while a stall fault is latched it does nothing (motor stays braked); while the target lies beyond a triggered endstop it holds the motor braked and pulls the target to the held position.
 
 #### `stop()`
 
@@ -261,7 +261,7 @@ DCMotorTacho(DCMotorServo *servo, double cpr, unsigned long speedInterval = 50)
 void run()
 ```
 
-Runs both the inner speed loop and the outer position loop. **Call every loop iteration.** While the wrapped servo is homing or stall-latched, the speed loop is held (its PID suspended and its counters kept in sync) so it cannot wind the position setpoint against a frozen encoder, and the zero-speed brake cannot cancel a homing move; normal speed control resumes automatically afterwards.
+Runs both the inner speed loop and the outer position loop. **Call every loop iteration.** While the wrapped servo is homing or stall-latched, the speed loop is held (its PID suspended and its counters kept in sync) so it cannot wind the position setpoint against a frozen encoder, and the zero-speed branch cannot silently cancel a homing move (an explicit `stop()` still cancels, as documented); normal speed control resumes automatically afterwards.
 
 #### `stop()`
 
