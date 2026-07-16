@@ -39,7 +39,9 @@ public:
   void run();
 
   /**
-   * Stops the motor by invoking the brake function.
+   * Stops the motor by invoking the brake function. Cancels an in-progress
+   * homing move, syncing the target to the current position so the motor
+   * holds where it stopped instead of chasing the pre-homing setpoint.
    */
   void stop();
 
@@ -121,7 +123,8 @@ public:
 
   /**
    * Attaches physical endstop sensors (limit switch, hall effect, ...).
-   * When a triggered endstop blocks the commanded direction, the motor is braked.
+   * While a triggered endstop blocks the direction the target lies in, run()
+   * holds the motor braked; motion away from the endstop remains allowed.
    * @param minStop Function returning true when the minimum-side endstop is triggered (or nullptr).
    * @param maxStop Function returning true when the maximum-side endstop is triggered (or nullptr).
    */
@@ -157,19 +160,31 @@ public:
   /**
    * Starts a non-blocking homing move: drives at a fixed PWM toward an extreme
    * until the matching endstop triggers or a stall is detected (whichever is
-   * attached/enabled), then brakes and zeroes the encoder there. Progressed by
-   * run(); poll isHoming() for completion. Cancelled by stop().
+   * attached/enabled), then brakes and zeroes the encoder there. Software
+   * travel limits are bypassed during the move. Progressed by run(); poll
+   * isHoming() for completion and isHomed() for success. Cancelled by stop().
    * @param direction Negative for the minimum-side extreme, positive for maximum-side.
    * @param pwm Drive PWM during homing (clamped to [pwm_skip, maxPWM]).
-   * @return False if direction is 0 or no endstop/stall detection can terminate the move.
+   * @param max_travel Failsafe: abort (unhomed) after this many encoder counts
+   *        of travel, e.g. against a dead endstop switch. 0 = unbounded.
+   * @return False if direction is 0 or no endstop/stall detection can detect the extreme.
    */
-  bool startHoming(int8_t direction, uint8_t pwm);
+  bool startHoming(int8_t direction, uint8_t pwm, long max_travel = 0);
 
   /**
    * Reports whether a homing move is in progress.
    * @return True while homing.
    */
   bool isHoming();
+
+  /**
+   * Reports whether the last homing move completed successfully (encoder was
+   * zeroed at a detected extreme). Cleared by startHoming(); stays false if
+   * homing was cancelled, aborted by max_travel, or lost its termination
+   * conditions mid-move. isHoming()==false alone does not imply success.
+   * @return True if homed.
+   */
+  bool isHomed();
 
   /**
    * Provides debugging information.
@@ -204,6 +219,7 @@ private:
   // Stall detection:
   bool _stall_enabled;
   bool _stalled;                  // Latched stall fault
+  bool _driving;                  // Motor was driven last cycle (stall window validity)
   unsigned long _stall_timeout;   // ms without movement before declaring a stall
   long _stall_min_counts;         // Encoder counts that qualify as movement
   unsigned long _stall_last_time; // Start of the current no-movement window
@@ -211,14 +227,18 @@ private:
 
   // Homing:
   bool _homing;
+  bool _homed;             // Last homing move succeeded (encoder zeroed at extreme)
   int8_t _homing_dir;
   uint8_t _homing_pwm;
+  long _homing_start_pos;  // Encoder position when homing started (max_travel bound)
+  long _homing_max_travel; // Abort homing after this travel; 0 = unbounded
 
   long clampToLimits(long position); // Apply software travel limits
   void resetStallWindow();           // Restart the no-movement window
   bool stallDetected();              // True if the window expired without movement
   void runHoming();                  // Homing branch of run()
-  void haltMotor();                  // Brake and suspend the PID
+  void finishHoming(bool success);   // Halt; zero encoder on success, hold position on failure
+  void haltMotor();                  // Brake, suspend the PID, end the drive cycle
 
   // Function pointers for hardware abstraction:
   MotorWriteFunc motorWrite;

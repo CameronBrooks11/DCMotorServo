@@ -80,8 +80,10 @@ void setup()
     // Doubles as a safety fault during normal moves.
     servo.enableStallDetection(300, 4);
 
-    // Home toward the minimum extreme at PWM 120
-    if (servo.startHoming(-1, 120))
+    // Home toward the minimum extreme at PWM 120. Homing bypasses the software
+    // travel limits; the third argument bounds the move as a failsafe in case
+    // the endstop switch is dead and nothing ever stalls.
+    if (servo.startHoming(-1, 120, TRAVEL_COUNTS + TRAVEL_COUNTS / 4))
     {
         Serial.println("Homing toward min extreme...");
     }
@@ -93,25 +95,36 @@ void setup()
 
 void loop()
 {
-    static bool homed = false;
+    static bool homingReported = false;
+    static bool stallReported = false;
 
     servo.run();
 
-    // Wait for homing to finish, then apply the software extrema
-    if (!homed && !servo.isHoming())
+    // Wait for homing to finish, then check whether it actually succeeded
+    if (!homingReported && !servo.isHoming())
     {
-        homed = true;
-        servo.setTravelLimits(0, TRAVEL_COUNTS);
-        Serial.println("Homed. Encoder zeroed, travel limits [0, 4000] set.");
-        Serial.println("Send MOVETO=<counts> (out-of-range targets are clamped).");
+        homingReported = true;
+        if (servo.isHomed())
+        {
+            servo.setTravelLimits(0, TRAVEL_COUNTS);
+            Serial.print("Homed. Encoder zeroed, travel limits [0, ");
+            Serial.print(TRAVEL_COUNTS);
+            Serial.println("] set.");
+            Serial.println("Send MOVETO=<counts> (out-of-range targets are clamped).");
+        }
+        else
+        {
+            Serial.println("Homing FAILED (cancelled or max_travel hit) - check the endstop.");
+        }
     }
 
-    // A stall during a normal move latches a fault until cleared
-    if (servo.isStalled())
+    // A stall during a normal move latches a fault: the motor stays braked.
+    // Keep it latched until deliberate operator intervention (CLEAR command) -
+    // auto-clearing would just slam the mechanism back into whatever jammed it.
+    if (servo.isStalled() && !stallReported)
     {
-        Serial.println("STALL detected mid-move! Clearing fault, returning to 0.");
-        servo.clearStall();
-        servo.moveTo(0);
+        stallReported = true;
+        Serial.println("STALL detected mid-move! Motor braked. Send CLEAR to recover.");
     }
 
     while (Serial.available() > 0)
@@ -125,16 +138,23 @@ void loop()
             Serial.print("Moving to: ");
             Serial.println(servo.getRequestedPosition()); // shows the clamped value
         }
+        else if (command == "CLEAR")
+        {
+            servo.clearStall();
+            servo.moveTo(0);
+            stallReported = false;
+            Serial.println("Stall cleared, returning to 0.");
+        }
         else if (command == "HOME")
         {
-            servo.clearTravelLimits(); // allow driving to the physical extreme
-            servo.startHoming(-1, 120);
-            homed = false;
+            // Homing bypasses travel limits, so they can stay set
+            servo.startHoming(-1, 120, TRAVEL_COUNTS + TRAVEL_COUNTS / 4);
+            homingReported = false;
             Serial.println("Re-homing...");
         }
         else
         {
-            Serial.println("Commands: MOVETO=<counts> | HOME");
+            Serial.println("Commands: MOVETO=<counts> | CLEAR | HOME");
         }
     }
 }

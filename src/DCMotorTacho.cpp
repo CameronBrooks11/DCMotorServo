@@ -54,6 +54,20 @@ double DCMotorTacho::getMeasuredSpeedRPM() const
 
 void DCMotorTacho::run()
 {
+    // Hold the speed loop while the servo is homing or stall-latched: winding
+    // the position setpoint against a frozen encoder would make clearStall()
+    // (or homing completion) a runaway move, and the zero-speed stop() below
+    // would silently cancel an in-progress homing move.
+    if (_servo->isHoming() || _servo->isStalled())
+    {
+        _speedPID->SetMode(MANUAL);
+        _speedPIDOutput = 0;
+        _lastEncoderCount = _servo->getActualPosition();
+        _lastSpeedUpdate = millis();
+        _servo->run(); // progress homing / hold the latched brake
+        return;
+    }
+
     // If desired speed is zero, ensure inner PID is off and stop motor.
     if (_desiredSpeedRPM == 0)
     {
@@ -70,6 +84,9 @@ void DCMotorTacho::run()
         // Calculate measured speed in RPM.
         _measuredSpeedRPM = ((double)(currentCount - _lastEncoderCount) / _CPR) * (60000.0 / dt);
         _speedPIDInput = _measuredSpeedRPM;
+        // Re-arm in case the hold above put the PID in MANUAL (no-op when
+        // already AUTOMATIC; the MANUAL->AUTOMATIC transition reinitializes).
+        _speedPID->SetMode(AUTOMATIC);
         _speedPID->Compute();
         // Inner PID output (in counts) is added to the outer loop setpoint.
         _servo->move((long)_speedPIDOutput);

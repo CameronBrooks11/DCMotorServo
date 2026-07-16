@@ -41,7 +41,7 @@ Direct access to the underlying [Arduino PID library](https://github.com/br3ttb/
 void run()
 ```
 
-Reads the encoder, computes PID output, and sends the result to the motor driver. **Call every loop iteration.**
+Reads the encoder, computes PID output, and sends the result to the motor driver. **Call every loop iteration.** With the extrema features active, `run()` first services the special modes: while homing it drives the homing move instead of the PID (encoder input is not tracked into the PID); while a stall fault is latched it does nothing (motor stays braked); while the target lies beyond a triggered endstop it holds the motor braked.
 
 #### `stop()`
 
@@ -49,7 +49,7 @@ Reads the encoder, computes PID output, and sends the result to the motor driver
 void stop()
 ```
 
-Engages the brake and suspends the PID controller.
+Engages the brake and suspends the PID controller. Also cancels an in-progress homing move — the target is synced to the current position so the motor holds where it stopped rather than chasing the pre-homing setpoint.
 
 #### `moveTo(position)`
 
@@ -169,7 +169,7 @@ Removes the software travel limits.
 void attachEndstops(EndstopReadFunc minStop, EndstopReadFunc maxStop)
 ```
 
-Attaches physical endstop sensors (limit switch, hall effect, ...). Each is a `bool ()` function returning `true` when triggered; pass `nullptr` for a side with no sensor. While an endstop is triggered, `run()` brakes any motion commanded further in that direction (motion away from it remains allowed).
+Attaches physical endstop sensors (limit switch, hall effect, ...). Each is a `bool ()` function returning `true` when triggered; pass `nullptr` for a side with no sensor. While the target position lies beyond a triggered endstop, `run()` holds the motor braked; motion away from the endstop remains allowed. The hold is judged on the direction of the position error, so it is stable — the motor does not chatter against the switch.
 
 #### `enableStallDetection(timeout_ms, min_counts)`
 
@@ -194,23 +194,24 @@ bool isStalled()
 void clearStall()
 ```
 
-`isStalled()` reports a latched stall fault; while latched, `run()` keeps the motor braked. `clearStall()` clears the fault and resumes normal operation.
+`isStalled()` reports a latched stall fault; while latched, `run()` keeps the motor braked. `clearStall()` clears the fault and resumes normal operation — note the target position is unchanged, so the motor will drive toward it again; re-target first if the cause of the stall is still present.
 
-#### `startHoming(direction, pwm)`
+#### `startHoming(direction, pwm, max_travel)`
 
 ```cpp
-bool startHoming(int8_t direction, uint8_t pwm)
+bool startHoming(int8_t direction, uint8_t pwm, long max_travel = 0)
 ```
 
-Starts a non-blocking homing move: drives at a fixed `pwm` (clamped to `[pwm_skip, maxPWM]`) toward an extreme — negative `direction` for the minimum side, positive for the maximum side — until the matching endstop triggers or a stall is detected, whichever is attached/enabled. On completion the motor brakes, the encoder is zeroed, and the setpoint is set to the (limit-clamped) zero. Returns `false` if `direction` is `0` or if neither the matching endstop nor stall detection is available to terminate the move. Progressed by `run()`; cancel with `stop()`.
+Starts a non-blocking homing move: drives at a fixed `pwm` (clamped to `[pwm_skip, maxPWM]`) toward an extreme — negative `direction` for the minimum side, positive for the maximum side — until the matching endstop triggers or a stall is detected, whichever is attached/enabled. Software travel limits are bypassed during the move. On success the motor brakes, the encoder is zeroed, and the setpoint is set to the (limit-clamped) zero. `max_travel` is a failsafe bound in encoder counts (e.g. against a dead endstop switch): exceeding it aborts the move *unhomed*, holding the current position; `0` means unbounded. Returns `false` if `direction` is `0` or if neither the matching endstop nor stall detection is available to detect the extreme. Progressed by `run()`; cancel with `stop()`.
 
-#### `isHoming()`
+#### `isHoming()` / `isHomed()`
 
 ```cpp
 bool isHoming()
+bool isHomed()
 ```
 
-Returns `true` while a homing move is in progress. Poll after `startHoming()` to detect completion.
+`isHoming()` returns `true` while a homing move is in progress; poll it after `startHoming()` to detect the end of the move. `isHomed()` reports whether the last homing move actually *succeeded* (encoder zeroed at a detected extreme) — it stays `false` when homing was cancelled by `stop()`, aborted by `max_travel`, or lost its termination conditions mid-move. `isHoming() == false` alone does not imply success; check `isHomed()`.
 
 ---
 
@@ -260,7 +261,7 @@ DCMotorTacho(DCMotorServo *servo, double cpr, unsigned long speedInterval = 50)
 void run()
 ```
 
-Runs both the inner speed loop and the outer position loop. **Call every loop iteration.**
+Runs both the inner speed loop and the outer position loop. **Call every loop iteration.** While the wrapped servo is homing or stall-latched, the speed loop is held (its PID suspended and its counters kept in sync) so it cannot wind the position setpoint against a frozen encoder, and the zero-speed brake cannot cancel a homing move; normal speed control resumes automatically afterwards.
 
 #### `stop()`
 
