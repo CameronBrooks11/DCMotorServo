@@ -10,6 +10,7 @@ typedef void (*MotorWriteFunc)(int16_t speed);
 typedef void (*MotorBrakeFunc)();
 typedef long (*EncoderReadFunc)();
 typedef void (*EncoderWriteFunc)(long newPosition);
+typedef bool (*EndstopReadFunc)(); // true = endstop triggered
 
 /**
  * @class DCMotorServo
@@ -106,6 +107,71 @@ public:
   void setCurrentPosition(long new_position);
 
   /**
+   * Sets software travel limits (extrema in encoder counts).
+   * Targets passed to move()/moveTo() are clamped into [min_position, max_position].
+   * @param min_position Lowest allowed target position.
+   * @param max_position Highest allowed target position.
+   */
+  void setTravelLimits(long min_position, long max_position);
+
+  /**
+   * Removes software travel limits.
+   */
+  void clearTravelLimits();
+
+  /**
+   * Attaches physical endstop sensors (limit switch, hall effect, ...).
+   * When a triggered endstop blocks the commanded direction, the motor is braked.
+   * @param minStop Function returning true when the minimum-side endstop is triggered (or nullptr).
+   * @param maxStop Function returning true when the maximum-side endstop is triggered (or nullptr).
+   */
+  void attachEndstops(EndstopReadFunc minStop, EndstopReadFunc maxStop);
+
+  /**
+   * Enables encoder-based stall detection: if the motor is driven but the encoder
+   * advances less than min_counts within timeout_ms, the motor is braked and a
+   * stall fault is latched (see isStalled()/clearStall()). During homing a stall
+   * is treated as reaching the extreme, not as a fault.
+   * @param timeout_ms Window with no movement before declaring a stall.
+   * @param min_counts Minimum encoder counts that qualify as movement (default 4).
+   */
+  void enableStallDetection(unsigned long timeout_ms, long min_counts = 4);
+
+  /**
+   * Disables stall detection.
+   */
+  void disableStallDetection();
+
+  /**
+   * Reports whether a stall fault is latched. While latched, run() holds the
+   * motor braked until clearStall() is called.
+   * @return True if stalled.
+   */
+  bool isStalled();
+
+  /**
+   * Clears a latched stall fault and resumes normal operation.
+   */
+  void clearStall();
+
+  /**
+   * Starts a non-blocking homing move: drives at a fixed PWM toward an extreme
+   * until the matching endstop triggers or a stall is detected (whichever is
+   * attached/enabled), then brakes and zeroes the encoder there. Progressed by
+   * run(); poll isHoming() for completion. Cancelled by stop().
+   * @param direction Negative for the minimum-side extreme, positive for maximum-side.
+   * @param pwm Drive PWM during homing (clamped to [pwm_skip, maxPWM]).
+   * @return False if direction is 0 or no endstop/stall detection can terminate the move.
+   */
+  bool startHoming(int8_t direction, uint8_t pwm);
+
+  /**
+   * Reports whether a homing move is in progress.
+   * @return True while homing.
+   */
+  bool isHoming();
+
+  /**
    * Provides debugging information.
    * @return A string with current status and PID parameters.
    */
@@ -126,6 +192,33 @@ private:
   uint8_t _pwm_skip;          // Minimum PWM to overcome low-power stall
   uint8_t _maxPWM;            // Maximum allowable PWM value
   uint8_t _position_accuracy; // Tolerance for position accuracy
+
+  // Software travel limits:
+  bool _limits_enabled;
+  long _limit_min, _limit_max;
+
+  // Physical endstops (nullptr = not attached):
+  EndstopReadFunc endstopMin;
+  EndstopReadFunc endstopMax;
+
+  // Stall detection:
+  bool _stall_enabled;
+  bool _stalled;                  // Latched stall fault
+  unsigned long _stall_timeout;   // ms without movement before declaring a stall
+  long _stall_min_counts;         // Encoder counts that qualify as movement
+  unsigned long _stall_last_time; // Start of the current no-movement window
+  long _stall_last_pos;           // Encoder position at window start
+
+  // Homing:
+  bool _homing;
+  int8_t _homing_dir;
+  uint8_t _homing_pwm;
+
+  long clampToLimits(long position); // Apply software travel limits
+  void resetStallWindow();           // Restart the no-movement window
+  bool stallDetected();              // True if the window expired without movement
+  void runHoming();                  // Homing branch of run()
+  void haltMotor();                  // Brake and suspend the PID
 
   // Function pointers for hardware abstraction:
   MotorWriteFunc motorWrite;

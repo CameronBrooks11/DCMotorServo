@@ -141,6 +141,79 @@ Resets the encoder count to `position` and updates the PID input. Useful for zer
 
 ---
 
+### Extrema sensing
+
+Three tiers, usable independently or together: software travel limits, physical
+endstops, and encoder-based stall detection. A non-blocking homing move ties
+them together by zeroing the encoder at a detected extreme.
+
+#### `setTravelLimits(min, max)`
+
+```cpp
+void setTravelLimits(long min_position, long max_position)
+```
+
+Sets software extrema in encoder counts. Targets passed to `move()`/`moveTo()` are clamped into `[min, max]` (arguments are swapped if given out of order). The current setpoint is clamped immediately.
+
+#### `clearTravelLimits()`
+
+```cpp
+void clearTravelLimits()
+```
+
+Removes the software travel limits.
+
+#### `attachEndstops(minStop, maxStop)`
+
+```cpp
+void attachEndstops(EndstopReadFunc minStop, EndstopReadFunc maxStop)
+```
+
+Attaches physical endstop sensors (limit switch, hall effect, ...). Each is a `bool ()` function returning `true` when triggered; pass `nullptr` for a side with no sensor. While an endstop is triggered, `run()` brakes any motion commanded further in that direction (motion away from it remains allowed).
+
+#### `enableStallDetection(timeout_ms, min_counts)`
+
+```cpp
+void enableStallDetection(unsigned long timeout_ms, long min_counts = 4)
+```
+
+Enables encoder-based stall detection: if the motor is being driven but the encoder advances fewer than `min_counts` counts within `timeout_ms`, the motor is braked and a stall fault is latched. During homing, a stall instead marks the extreme (sensorless homing). Choose `timeout_ms` longer than your mechanism's worst-case time to produce `min_counts` at minimum PWM.
+
+#### `disableStallDetection()`
+
+```cpp
+void disableStallDetection()
+```
+
+Disables stall detection.
+
+#### `isStalled()` / `clearStall()`
+
+```cpp
+bool isStalled()
+void clearStall()
+```
+
+`isStalled()` reports a latched stall fault; while latched, `run()` keeps the motor braked. `clearStall()` clears the fault and resumes normal operation.
+
+#### `startHoming(direction, pwm)`
+
+```cpp
+bool startHoming(int8_t direction, uint8_t pwm)
+```
+
+Starts a non-blocking homing move: drives at a fixed `pwm` (clamped to `[pwm_skip, maxPWM]`) toward an extreme — negative `direction` for the minimum side, positive for the maximum side — until the matching endstop triggers or a stall is detected, whichever is attached/enabled. On completion the motor brakes, the encoder is zeroed, and the setpoint is set to the (limit-clamped) zero. Returns `false` if `direction` is `0` or if neither the matching endstop nor stall detection is available to terminate the move. Progressed by `run()`; cancel with `stop()`.
+
+#### `isHoming()`
+
+```cpp
+bool isHoming()
+```
+
+Returns `true` while a homing move is in progress. Poll after `startHoming()` to detect completion.
+
+---
+
 ### Diagnostics
 
 #### `getDebugInfo()`
@@ -149,7 +222,7 @@ Resets the encoder count to `position` and updates the PID input. Useful for zer
 String getDebugInfo()
 ```
 
-Returns a multi-line string with encoder position, PID setpoint/input/output, PWM skip, accuracy, and PID gains.
+Returns a multi-line string with encoder position, PID setpoint/input/output, PWM skip, accuracy, travel limits (when set), stall/homing state, and PID gains.
 
 #### `getSerialPlotter(id)`
 

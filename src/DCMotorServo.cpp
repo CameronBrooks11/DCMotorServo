@@ -3,11 +3,25 @@
 #include <Arduino.h>
 
 DCMotorServo::DCMotorServo(MotorWriteFunc mWrite, MotorBrakeFunc mBrake, EncoderReadFunc eRead, EncoderWriteFunc eWrite)
-    : motorWrite(mWrite), motorBrake(mBrake), encoderRead(eRead), encoderWrite(eWrite), _maxPWM(255)
+    : _maxPWM(255), motorWrite(mWrite), motorBrake(mBrake), encoderRead(eRead), encoderWrite(eWrite)
 {
   _PWM_output = 0;
   _pwm_skip = 50;
   _position_accuracy = 30;
+
+  _limits_enabled = false;
+  _limit_min = _limit_max = 0;
+  endstopMin = nullptr;
+  endstopMax = nullptr;
+  _stall_enabled = false;
+  _stalled = false;
+  _stall_timeout = 0;
+  _stall_min_counts = 4;
+  _stall_last_time = 0;
+  _stall_last_pos = 0;
+  _homing = false;
+  _homing_dir = 0;
+  _homing_pwm = 0;
 
   _PID_input = encoderRead();
   _PID_output = 0;
@@ -60,12 +74,139 @@ bool DCMotorServo::finished()
 
 void DCMotorServo::move(long new_rela_position)
 {
-  _PID_setpoint += new_rela_position;
+  moveTo((long)_PID_setpoint + new_rela_position);
 }
 
 void DCMotorServo::moveTo(long new_position)
 {
-  _PID_setpoint = new_position;
+  _PID_setpoint = clampToLimits(new_position);
+}
+
+void DCMotorServo::setTravelLimits(long min_position, long max_position)
+{
+  if (min_position > max_position)
+  {
+    long tmp = min_position;
+    min_position = max_position;
+    max_position = tmp;
+  }
+  _limit_min = min_position;
+  _limit_max = max_position;
+  _limits_enabled = true;
+  _PID_setpoint = clampToLimits((long)_PID_setpoint);
+}
+
+void DCMotorServo::clearTravelLimits()
+{
+  _limits_enabled = false;
+}
+
+long DCMotorServo::clampToLimits(long position)
+{
+  if (!_limits_enabled)
+    return position;
+  if (position < _limit_min)
+    return _limit_min;
+  if (position > _limit_max)
+    return _limit_max;
+  return position;
+}
+
+void DCMotorServo::attachEndstops(EndstopReadFunc minStop, EndstopReadFunc maxStop)
+{
+  endstopMin = minStop;
+  endstopMax = maxStop;
+}
+
+void DCMotorServo::enableStallDetection(unsigned long timeout_ms, long min_counts)
+{
+  _stall_timeout = timeout_ms;
+  _stall_min_counts = min_counts;
+  _stall_enabled = true;
+  resetStallWindow();
+}
+
+void DCMotorServo::disableStallDetection()
+{
+  _stall_enabled = false;
+}
+
+bool DCMotorServo::isStalled()
+{
+  return _stalled;
+}
+
+void DCMotorServo::clearStall()
+{
+  _stalled = false;
+  resetStallWindow();
+}
+
+void DCMotorServo::resetStallWindow()
+{
+  _stall_last_pos = encoderRead();
+  _stall_last_time = millis();
+}
+
+bool DCMotorServo::stallDetected()
+{
+  long pos = encoderRead();
+  unsigned long now = millis();
+  if (labs(pos - _stall_last_pos) >= _stall_min_counts)
+  {
+    _stall_last_pos = pos;
+    _stall_last_time = now;
+    return false;
+  }
+  return (now - _stall_last_time) >= _stall_timeout;
+}
+
+bool DCMotorServo::startHoming(int8_t direction, uint8_t pwm)
+{
+  if (direction == 0)
+    return false;
+  EndstopReadFunc target = (direction < 0) ? endstopMin : endstopMax;
+  if (target == nullptr && !_stall_enabled)
+    return false; // nothing can detect the extreme
+  _homing_dir = (direction < 0) ? -1 : 1;
+  _homing_pwm = constrain(pwm, _pwm_skip, _maxPWM);
+  _homing = true;
+  _stalled = false;
+  resetStallWindow();
+  myPID->SetMode(MANUAL);
+  return true;
+}
+
+bool DCMotorServo::isHoming()
+{
+  return _homing;
+}
+
+void DCMotorServo::runHoming()
+{
+  EndstopReadFunc target = (_homing_dir < 0) ? endstopMin : endstopMax;
+  bool reached = (target != nullptr && target());
+  if (!reached && _stall_enabled)
+    reached = stallDetected(); // sensorless homing: stall marks the extreme
+  if (!reached)
+  {
+    motorWrite(_homing_dir < 0 ? -(int16_t)_homing_pwm : (int16_t)_homing_pwm);
+    return;
+  }
+  haltMotor();
+  _homing = false;
+  encoderWrite(0);
+  _PID_input = 0;
+  _PID_setpoint = clampToLimits(0);
+  resetStallWindow();
+}
+
+void DCMotorServo::haltMotor()
+{
+  myPID->SetMode(MANUAL);
+  _PID_output = 0;
+  _PWM_output = 0;
+  motorBrake();
 }
 
 long DCMotorServo::getRequestedPosition()
@@ -80,6 +221,14 @@ long DCMotorServo::getActualPosition()
 
 void DCMotorServo::run()
 {
+  if (_homing)
+  {
+    runHoming();
+    return;
+  }
+  if (_stalled)
+    return; // latched fault: motor stays braked until clearStall()
+
   _PID_input = encoderRead();
   myPID->Compute();
 
@@ -100,16 +249,39 @@ void DCMotorServo::run()
   // Determine final speed (direction based on PID output sign)
   int finalSpeed = (_PID_output < 0) ? -outputPWM : outputPWM;
 
+  // Block motion into a triggered endstop
+  if ((finalSpeed < 0 && endstopMin != nullptr && endstopMin()) ||
+      (finalSpeed > 0 && endstopMax != nullptr && endstopMax()))
+  {
+    haltMotor();
+    resetStallWindow();
+    return;
+  }
+
+  _PWM_output = outputPWM;
+
   // Send the computed speed via the user-supplied function
   motorWrite(finalSpeed);
+
+  // Stall fault: motor driven but encoder not advancing
+  if (_stall_enabled && outputPWM > 0)
+  {
+    if (stallDetected())
+    {
+      _stalled = true;
+      haltMotor();
+    }
+  }
+  else
+  {
+    resetStallWindow();
+  }
 }
 
 void DCMotorServo::stop()
 {
-  myPID->SetMode(MANUAL);
-  _PID_output = 0;
-  _PWM_output = 0;
-  motorBrake();
+  _homing = false;
+  haltMotor();
 }
 
 String DCMotorServo::getDebugInfo()
@@ -121,6 +293,9 @@ String DCMotorServo::getDebugInfo()
   info += "PID Output: " + String(_PID_output) + "\n";
   info += "PWM Skip: " + String(_pwm_skip) + "\n";
   info += "Position Accuracy: " + String(_position_accuracy) + "\n";
+  if (_limits_enabled)
+    info += "Travel Limits: [" + String(_limit_min) + ", " + String(_limit_max) + "]\n";
+  info += "Stalled: " + String(_stalled ? "yes" : "no") + ", Homing: " + String(_homing ? "yes" : "no") + "\n";
 
   double Kp = myPID->GetKp();
   double Ki = myPID->GetKi();
