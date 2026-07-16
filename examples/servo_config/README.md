@@ -4,7 +4,7 @@ This directory contains a series of subdirectories to walk the user through the 
 
 ## Procedure
 
-0. Ensure you have connected your chosen motor and driver and noted the connections to your MCU.
+0. Ensure you have connected your chosen motor and driver and noted the connections to your MCU. Set your driver selection, pins, and motor specs in the sketch's `baseSpecs.h` (see [examples/README.md](../README.md#configuration-workflow)) — record each step's result there and copy the file forward to the next step.
 1. PWM Skip: the 01_pwm_skip directory provides a script to determine the PWM skip value for your specific motor.
 2. Accuracy Estimate: the 02_accuracy_estimate provides a script to estimate an appripriate accuracy value.
 3. PID Tuning: Upload the script and open the serial plotter to view outputs adn open serial plotter and send commands (i.e. KP=0.5, MOVE=5000, etc) to tune the PID constants and apply position steps.
