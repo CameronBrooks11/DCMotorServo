@@ -26,7 +26,7 @@ The bundled examples drive their motors through two small driver libraries (not 
 | Library | Provides | Install |
 | --- | --- | --- |
 | [LMD18200](https://github.com/CameronBrooks11/lmd18200) | `LMD18200.h` | PIO: `cameronbrooks11/LMD18200`, or clone into your libraries dir |
-| [L298N](https://github.com/CameronBrooks11/L298N_Arduino) | `L298N.h` | Clone into your libraries dir (GitHub only) |
+| [L298N](https://github.com/CameronBrooks11/L298N_Arduino) | `L298N.h` | PIO: `cameronbrooks11/L298N`, or clone into your libraries dir |
 
 ---
 
