@@ -41,9 +41,3 @@ Be sure to pick a PWM capable pin for pin_pwm_output.
 The two input pins are for the encoder feedback.
 
 Two directional pins allow for setting a motor brake by shorting the terminals of the motor together (set both directions HIGH, and preferably turn off the PWM)
-
-## TODO
-
-- implement brake feature for 3-pin mode
-- 2-pin constructor
-- implement friendlier tuning method for PID
