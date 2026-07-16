@@ -5,10 +5,11 @@ All notable changes to this library are documented here. Follows
 [Semantic Versioning](https://semver.org). History before 1.0.1 was
 reconstructed from the git log.
 
-## [Unreleased] — 1.1.0
+## [1.1.0] — 2026-07-16
 
-Pending bench validation ([#3](https://github.com/CameronBrooks11/DCMotorServo/issues/3))
-before tagging and publishing to the PlatformIO registry.
+Verified by adversarial code review and compile checks; hardware bench
+validation is tracked in
+[#3](https://github.com/CameronBrooks11/DCMotorServo/issues/3).
 
 ### Added
 
