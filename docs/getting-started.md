@@ -19,6 +19,15 @@ Dependencies (`PID` and `Encoder`) are declared in `library.json` and will be re
 2. Install dependencies from Library Manager: **PID** by Brett Beauregard and **Encoder** by Paul Stoffregen.
 3. Restart the Arduino IDE.
 
+### Example driver libraries
+
+The bundled examples drive their motors through two small driver libraries (not needed by DCMotorServo itself — your own `MotorWriteFunc`/`MotorBrakeFunc` wrappers replace them in real projects):
+
+| Library | Provides | Install |
+| --- | --- | --- |
+| [LMD18200](https://github.com/CameronBrooks11/lmd18200) | `LMD18200.h` | PIO: `cameronbrooks11/LMD18200`, or clone into your libraries dir |
+| [L298N](https://github.com/CameronBrooks11/L298N_Arduino) | `L298N.h` | Clone into your libraries dir (GitHub only) |
+
 ---
 
 ## Concept
