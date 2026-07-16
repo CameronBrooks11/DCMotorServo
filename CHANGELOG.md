@@ -7,8 +7,8 @@ reconstructed from the git log.
 
 ## [1.1.0] — 2026-07-16
 
-Verified by adversarial code review and compile checks; hardware bench
-validation is tracked in
+Verified by code review and compile checks; hardware bench validation
+is tracked in
 [#3](https://github.com/CameronBrooks11/DCMotorServo/issues/3).
 
 ### Added
