@@ -10,6 +10,7 @@ typedef void (*MotorWriteFunc)(int16_t speed);
 typedef void (*MotorBrakeFunc)();
 typedef long (*EncoderReadFunc)();
 typedef void (*EncoderWriteFunc)(long newPosition);
+typedef bool (*EndstopReadFunc)(); // true = endstop triggered
 
 /**
  * @class DCMotorServo
@@ -34,11 +35,17 @@ public:
 
   /**
    * Runs the PID controller and sends the computed output to the motor driver.
+   * Special modes take precedence over the PID: while homing this drives the
+   * homing move; while a stall fault is latched it does nothing (motor stays
+   * braked); while the target lies beyond a triggered endstop it holds the
+   * motor braked and pulls the target to the held position.
    */
   void run();
 
   /**
-   * Stops the motor by invoking the brake function.
+   * Stops the motor by invoking the brake function. Cancels an in-progress
+   * homing move, syncing the target to the current position so the motor
+   * holds where it stopped instead of chasing the pre-homing setpoint.
    */
   void stop();
 
@@ -68,6 +75,9 @@ public:
 
   /**
    * Checks if the motor has reached its target position within defined accuracy.
+   * Always false while a homing move is in progress. A target blocked by a
+   * triggered endstop is pulled to the held position, so this reports true
+   * once the motor has gone as far as it can.
    * @return True if the motor is at the target position, false otherwise.
    */
   bool finished();
@@ -106,6 +116,88 @@ public:
   void setCurrentPosition(long new_position);
 
   /**
+   * Sets software travel limits (extrema in encoder counts).
+   * Targets passed to move()/moveTo() are clamped into [min_position, max_position].
+   * @param min_position Lowest allowed target position.
+   * @param max_position Highest allowed target position.
+   */
+  void setTravelLimits(long min_position, long max_position);
+
+  /**
+   * Removes software travel limits.
+   */
+  void clearTravelLimits();
+
+  /**
+   * Attaches physical endstop sensors (limit switch, hall effect, ...).
+   * While a triggered endstop blocks the direction the target lies in, run()
+   * holds the motor braked and pulls the target to the held position (so a
+   * later switch release cannot cause an uncommanded move); motion away from
+   * the endstop remains allowed.
+   * @param minStop Function returning true when the minimum-side endstop is triggered (or nullptr).
+   * @param maxStop Function returning true when the maximum-side endstop is triggered (or nullptr).
+   */
+  void attachEndstops(EndstopReadFunc minStop, EndstopReadFunc maxStop);
+
+  /**
+   * Enables encoder-based stall detection: if the motor is driven but the encoder
+   * advances less than min_counts within timeout_ms, the motor is braked and a
+   * stall fault is latched (see isStalled()/clearStall()). During homing a stall
+   * is treated as reaching the extreme, not as a fault.
+   * @param timeout_ms Window with no movement before declaring a stall.
+   * @param min_counts Minimum encoder counts that qualify as movement (default 4).
+   */
+  void enableStallDetection(unsigned long timeout_ms, long min_counts = 4);
+
+  /**
+   * Disables stall detection.
+   */
+  void disableStallDetection();
+
+  /**
+   * Reports whether a stall fault is latched. While latched, run() holds the
+   * motor braked until clearStall() is called.
+   * @return True if stalled.
+   */
+  bool isStalled();
+
+  /**
+   * Clears a latched stall fault and resumes normal operation.
+   */
+  void clearStall();
+
+  /**
+   * Starts a non-blocking homing move: drives at a fixed PWM toward an extreme
+   * until the matching endstop triggers or a stall is detected (whichever is
+   * attached/enabled), then brakes and zeroes the encoder there. Software
+   * travel limits are bypassed during the move, and any latched stall fault
+   * is cleared (a stall during homing marks the extreme, not a fault).
+   * Progressed by run(); poll isHoming() for completion and isHomed() for
+   * success. Cancelled by stop().
+   * @param direction Negative for the minimum-side extreme, positive for maximum-side.
+   * @param pwm Drive PWM during homing (clamped to [pwm_skip, maxPWM]).
+   * @param max_travel Failsafe: abort (unhomed) after this many encoder counts
+   *        of travel, e.g. against a dead endstop switch. 0 = unbounded.
+   * @return False if direction is 0 or no endstop/stall detection can detect the extreme.
+   */
+  bool startHoming(int8_t direction, uint8_t pwm, long max_travel = 0);
+
+  /**
+   * Reports whether a homing move is in progress.
+   * @return True while homing.
+   */
+  bool isHoming();
+
+  /**
+   * Reports whether the last homing move completed successfully (encoder was
+   * zeroed at a detected extreme). Cleared by startHoming(); stays false if
+   * homing was cancelled, aborted by max_travel, or lost its termination
+   * conditions mid-move. isHoming()==false alone does not imply success.
+   * @return True if homed.
+   */
+  bool isHomed();
+
+  /**
    * Provides debugging information.
    * @return A string with current status and PID parameters.
    */
@@ -126,6 +218,38 @@ private:
   uint8_t _pwm_skip;          // Minimum PWM to overcome low-power stall
   uint8_t _maxPWM;            // Maximum allowable PWM value
   uint8_t _position_accuracy; // Tolerance for position accuracy
+
+  // Software travel limits:
+  bool _limits_enabled;
+  long _limit_min, _limit_max;
+
+  // Physical endstops (nullptr = not attached):
+  EndstopReadFunc endstopMin;
+  EndstopReadFunc endstopMax;
+
+  // Stall detection:
+  bool _stall_enabled;
+  bool _stalled;                  // Latched stall fault
+  bool _driving;                  // Motor was driven last cycle (stall window validity)
+  unsigned long _stall_timeout;   // ms without movement before declaring a stall
+  long _stall_min_counts;         // Encoder counts that qualify as movement
+  unsigned long _stall_last_time; // Start of the current no-movement window
+  long _stall_last_pos;           // Encoder position at window start
+
+  // Homing:
+  bool _homing;
+  bool _homed;             // Last homing move succeeded (encoder zeroed at extreme)
+  int8_t _homing_dir;
+  uint8_t _homing_pwm;
+  long _homing_start_pos;  // Encoder position when homing started (max_travel bound)
+  long _homing_max_travel; // Abort homing after this travel; 0 = unbounded
+
+  long clampToLimits(long position); // Apply software travel limits
+  void resetStallWindow();           // Restart the no-movement window
+  bool stallDetected();              // True if the window expired without movement
+  void runHoming();                  // Homing branch of run()
+  void finishHoming(bool success);   // Halt; zero encoder on success, hold position on failure
+  void haltMotor();                  // Brake, suspend the PID, end the drive cycle
 
   // Function pointers for hardware abstraction:
   MotorWriteFunc motorWrite;
