@@ -49,6 +49,13 @@ before tagging and publishing to the PlatformIO registry.
 - README rewritten for the driver-agnostic API (the old pin-based
   sections were stale).
 - Example driver-library dependencies (L298N, LMD18200) documented.
+- Tuning walkthrough READMEs: servo PID (03), rotational/CPR-fudge
+  calibration (04), tacho procedure incl. speedInterval selection, and
+  speed-PID tuning.
+- Config sketches refactored around a per-sketch `baseSpecs.h` spec
+  sheet (driver, pins, motor specs, determined values) with a
+  documented fill-in-and-copy-forward workflow; drifted tuning values
+  unified to the reference rig's.
 - `TODO.md` and the README TODO section retired; all outstanding work
   tracked as GitHub issues.
 
