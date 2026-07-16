@@ -1,43 +1,50 @@
 # DCMotorServo
 
-An Arduino Library for controlling DC motors with rotary encoders. This library is an updated version and continuation of [julester23 / DCMotorServo](https://github.com/julester23/DCMotorServo) uses PID and Encoder feedback, inspired by the [adafruit / AccelStepper](https://github.com/adafruit/AccelStepper) library.
+An Arduino library for closed-loop control of brushed DC motors with quadrature encoders — position control like a servo (without the angle limit), plus an optional cascaded speed loop. A continuation of [julester23/DCMotorServo](https://github.com/julester23/DCMotorServo), inspired by [AccelStepper](https://github.com/adafruit/AccelStepper).
 
-- Encoder Library, for measuring quadrature encoded signals from the Arduino library manager and also on [pjrc.com/teensy/td_libs_Encoder.html](http://www.pjrc.com/teensy/td_libs_Encoder.html)
-- PID Library, for using encoder feedback to control the motor from the Arduino library manager and also on [github.com/br3ttb/Arduino-PID-Library](https://github.com/br3ttb/Arduino-PID-Library)
+## Features
 
-## Circuit
+- **Position control** (`DCMotorServo`): PID on encoder counts — `moveTo()`, `move()`, `finished()`, accuracy dead-band, PWM-skip stiction compensation
+- **Speed control** (`DCMotorTacho`): cascaded RPM loop layered on the position loop — `setSpeedRPM()`
+- **Extrema sensing** (v1.1.0): software travel limits, physical endstop callbacks, encoder-based stall detection (no extra hardware), and non-blocking homing — endstop or sensorless — with a dead-switch failsafe
+- **Driver-agnostic**: no pin logic in the library. You supply four function pointers and any H-bridge or driver IC works:
 
-I used a 754410 quad half-H controller (a pin-compatible L293D). I'm sure it would be cheaper to make out of other components, but I've never done transistor matching, and I'm afraid of burning things.
+| Pointer | Signature | Purpose |
+| --- | --- | --- |
+| `MotorWriteFunc` | `void fn(int16_t speed)` | Signed PWM to the driver |
+| `MotorBrakeFunc` | `void fn()` | Engage the brake |
+| `EncoderReadFunc` | `long fn()` | Current encoder count |
+| `EncoderWriteFunc` | `void fn(long pos)` | Reset/zero the count |
 
-### Example circuit connections
+## Dependencies
 
-| L293D or 754410 pins | Device  |                |
-| -------------------- | ------- | -------------- |
-| 1, 9                 | arduino | pin_pwm_output |
-| 2, 15                | arduino | pin_dir        |
-| 7, 10                | arduino | pin_dir        |
-| 4, 5, 12, 13         | power   | GND            |
-| 16                   | power   | 5V             |
-| 8                    | power   | 12V            |
-| 3, 14                | motor   | motor pin 1    |
-| 6, 11                | motor   | motor pin 2    |
+Declared in the manifests and resolved automatically by PlatformIO; via Library Manager for Arduino IDE:
 
-## Hardware
+- [PID](https://github.com/br3ttb/Arduino-PID-Library) by Brett Beauregard
+- [Encoder](https://www.pjrc.com/teensy/td_libs_Encoder.html) by Paul Stoffregen
 
-- Example 1: Move_1inch
-  - [Metal Gearmotor 37Dx57L mm with 64 CPR Encoder from Pololu](http://www.pololu.com/catalog/product/1447)
-  - Arduino
-  - [MC33926 Motor Driver Carrier from Pololu](http://www.pololu.com/product/1212)
-- Example 2: XXX
-  - [20D Planetary Gearmotor w/ Encoder - 12V 515RPM by E-S Motor via RobotShop](https://ca.robotshop.com/products/20d-planetary-gearmotor-w-encoder-12v-515rpm)
-  - Arduino Nano
-  - [298N Motor Drive Controller Board Module](https://a.co/d/eVYWQRd)
+The bundled examples additionally use the [L298N](https://github.com/CameronBrooks11/L298N_Arduino) and [LMD18200](https://github.com/CameronBrooks11/lmd18200) driver libraries (example-only — your own wrappers replace them in real projects).
 
-## Pins
+## Getting started
 
-Pinout for motor control uses 3 pins for output. It is somewhat wasteful, but had more flexibility. Two pins for direction control, and one for motor power (assuming PWM).
-Be sure to pick a PWM capable pin for pin_pwm_output.
+```cpp
+DCMotorServo servo(motorWrite, motorBrake, encoderRead, encoderWrite);
 
-The two input pins are for the encoder feedback.
+void loop() {
+    servo.run();            // call every iteration
+    if (servo.finished()) { /* ... */ }
+}
+```
 
-Two directional pins allow for setting a motor brake by shorting the terminals of the motor together (set both directions HIGH, and preferably turn off the PWM)
+- [docs/getting-started.md](docs/getting-started.md) — installation, the function-pointer concept, minimal wiring examples
+- [docs/tuning.md](docs/tuning.md) — CPR determination, PID and accuracy tuning stages
+- [docs/api.md](docs/api.md) — full API reference
+- [examples/](examples/README.md) — guided config procedures (`servo_config`, `tacho_config`) and ready-to-run `usage_demos`
+
+## Reference hardware
+
+Developed and tested with a 26PG-3429-19-EN gearmotor (encoder) on L298N and LMD18200 drivers; any driver/encoder combination works through the function-pointer interface.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
