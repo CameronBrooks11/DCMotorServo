@@ -21,7 +21,7 @@ target_compile_definitions(dcmotorservo PUBLIC ARDUINO=100)
 target_compile_options(dcmotorservo PRIVATE -Wall -Wextra)
 
 enable_testing()
-foreach(name test_servo_smoke)
+foreach(name test_servo_smoke test_tacho_restart)
   add_executable(${name} ${name}.cpp)
   target_link_libraries(${name} PRIVATE dcmotorservo)
   add_test(NAME ${name} COMMAND ${name})
