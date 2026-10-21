@@ -12,6 +12,9 @@ reconstructed from the git log.
 - `DCMotorTacho`: restarting the speed loop after `setSpeedRPM(0)`,
   `stop()` or a homing/stall hold no longer seeds the speed PID from the
   last output and input, which could drive the motor the wrong way (#12)
+- `DCMotorTacho`: the first speed sample after starting from zero no longer
+  counts the travel since the loop last ran, such as a position move, as
+  speed (#13)
 
 ### Changed
 

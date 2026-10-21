@@ -277,7 +277,7 @@ Brakes the motor and disables the inner PID.
 void setSpeedRPM(double rpm)
 ```
 
-Sets the desired shaft speed in RPM. Negative values reverse direction. `0` engages the brake.
+Sets the desired shaft speed in RPM. Negative values reverse direction. `0` engages the brake. A non-zero speed after `0` starts speed measurement afresh, so travel while the loop was idle doesn't count as speed.
 
 #### `getDesiredSpeedRPM()`
 

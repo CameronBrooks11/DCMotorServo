@@ -22,6 +22,13 @@ DCMotorTacho::DCMotorTacho(DCMotorServo *servo, double cpr, unsigned long speedI
 
 void DCMotorTacho::setSpeedRPM(double rpm)
 {
+    if (_desiredSpeedRPM == 0 && rpm != 0)
+    {
+        // Starting: measure from here, not from the last speed sample, which
+        // may predate position or open-loop travel.
+        _lastEncoderCount = _servo->getActualPosition();
+        _lastSpeedUpdate = millis();
+    }
     _desiredSpeedRPM = rpm;
     _speedPIDSetpoint = rpm;
     if (rpm == 0)
