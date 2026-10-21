@@ -303,6 +303,14 @@ void setPIDTunings(double Kp, double Ki, double Kd)
 
 Sets the inner (speed) PID gains. The outer (position) gains are set on the underlying `DCMotorServo`.
 
+#### `setMaxLead(counts)`
+
+```cpp
+void setMaxLead(long counts)
+```
+
+Caps how far the position target may lead the encoder, in counts. Without a cap, a stalled shaft lets the speed loop drive the target arbitrarily far ahead, and the motor lunges to catch up on release. `0` (the default) disables the cap. Set it above the lead the position PID needs to reach the PWM your load requires, or the cap limits drive.
+
 #### `getServo()`
 
 ```cpp

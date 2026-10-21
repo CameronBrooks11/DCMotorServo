@@ -38,6 +38,12 @@ public:
     double getDesiredSpeedRPM() const;
     /// Set inner PID tunings for speed control.
     void setPIDTunings(double Kp, double Ki, double Kd);
+    /**
+     * Cap how far the position target may lead the encoder, in counts, so a
+     * stalled shaft can't bank travel for a lunge on release. 0 (the
+     * default) disables the cap.
+     */
+    void setMaxLead(long counts);
     /// Get the most recently measured speed (RPM).
     double getMeasuredSpeedRPM() const;
     /**
@@ -60,6 +66,7 @@ private:
     double _measuredSpeedRPM;     // Measured speed (RPM).
     double _CPR;                  // Encoder counts per revolution.
     unsigned long _speedInterval; // Speed update interval in ms.
+    long _maxLead;                // Max target lead over the encoder (counts); 0 = off.
 
     // Variables for speed measurement:
     unsigned long _lastSpeedUpdate; // Timestamp of last inner loop update.

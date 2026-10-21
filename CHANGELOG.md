@@ -7,6 +7,12 @@ reconstructed from the git log.
 
 ## [Unreleased]
 
+### Added
+
+- `DCMotorTacho::setMaxLead()` caps how far the speed loop can drive the
+  position target ahead of the encoder, so a stalled shaft can't bank
+  travel for a lunge on release. Off by default (#13)
+
 ### Fixed
 
 - `DCMotorTacho`: restarting the speed loop after `setSpeedRPM(0)`,

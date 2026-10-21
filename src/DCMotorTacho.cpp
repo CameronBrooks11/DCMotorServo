@@ -9,6 +9,7 @@ DCMotorTacho::DCMotorTacho(DCMotorServo *servo, double cpr, unsigned long speedI
     _speedPIDInput = 0;
     _speedPIDOutput = 0;
     _measuredSpeedRPM = 0.0;
+    _maxLead = 0;
     _lastSpeedUpdate = millis();
     _lastEncoderCount = _servo->getActualPosition();
 
@@ -52,6 +53,11 @@ double DCMotorTacho::getDesiredSpeedRPM() const
 void DCMotorTacho::setPIDTunings(double Kp, double Ki, double Kd)
 {
     _speedPID->SetTunings(Kp, Ki, Kd);
+}
+
+void DCMotorTacho::setMaxLead(long counts)
+{
+    _maxLead = (counts < 0) ? -counts : counts;
 }
 
 double DCMotorTacho::getMeasuredSpeedRPM() const
@@ -98,6 +104,15 @@ void DCMotorTacho::run()
         _speedPID->Compute();
         // Inner PID output (in counts) is added to the outer loop setpoint.
         _servo->move((long)_speedPIDOutput);
+        if (_maxLead > 0)
+        {
+            // Don't let a stalled shaft bank travel for a lunge on release.
+            long lead = _servo->getRequestedPosition() - currentCount;
+            if (lead > _maxLead)
+                _servo->moveTo(currentCount + _maxLead);
+            else if (lead < -_maxLead)
+                _servo->moveTo(currentCount - _maxLead);
+        }
         _lastEncoderCount = currentCount;
         _lastSpeedUpdate = currentTime;
     }
