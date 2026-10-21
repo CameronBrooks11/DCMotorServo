@@ -217,7 +217,7 @@ private:
   uint8_t _PWM_output;        // Computed PWM value
   uint8_t _pwm_skip;          // Minimum PWM to overcome low-power stall
   uint8_t _maxPWM;            // Maximum allowable PWM value
-  uint8_t _position_accuracy; // Tolerance for position accuracy
+  unsigned int _position_accuracy; // Tolerance for position accuracy
 
   // Software travel limits:
   bool _limits_enabled;
