@@ -49,7 +49,7 @@ Reads the encoder, computes PID output, and sends the result to the motor driver
 void stop()
 ```
 
-Engages the brake and suspends the PID controller. Also cancels an in-progress homing move — the target is synced to the current position so the motor holds where it stopped rather than chasing the pre-homing setpoint.
+Engages the brake, suspends the PID controller, and syncs the target to the current position so the motor holds where it stopped rather than chasing the old setpoint. Also cancels an in-progress homing move.
 
 #### `moveTo(position)`
 

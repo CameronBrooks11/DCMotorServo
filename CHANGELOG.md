@@ -13,6 +13,13 @@ reconstructed from the git log.
   `stop()` or a homing/stall hold no longer seeds the speed PID from the
   last output and input, which could drive the motor the wrong way (#12)
 
+### Changed
+
+- `DCMotorServo::stop()` now syncs the target to the current position in
+  every case, not only when cancelling homing. A `run()` after `stop()`
+  holds instead of resuming the old move, and a speed loop started after
+  a position move no longer inherits its target (#13)
+
 ## [1.1.0] — 2026-07-16
 
 Verified by code review and compile checks; hardware bench validation
