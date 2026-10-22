@@ -15,6 +15,8 @@ reconstructed from the git log.
 
 ### Fixed
 
+- `setAccuracy()` no longer wraps values above 255: the tolerance is now
+  stored as `unsigned int`, matching the parameter (#11)
 - `DCMotorTacho`: restarting the speed loop after `setSpeedRPM(0)`,
   `stop()` or a homing/stall hold no longer seeds the speed PID from the
   last output and input, which could drive the motor the wrong way (#12)
