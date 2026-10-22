@@ -7,11 +7,27 @@ reconstructed from the git log.
 
 ## [Unreleased]
 
+### Added
+
+- `DCMotorTacho::setMaxLead()` caps how far the speed loop can drive the
+  position target ahead of the encoder, so a stalled shaft can't bank
+  travel for a lunge on release. Off by default (#13)
+
 ### Fixed
 
 - `DCMotorTacho`: restarting the speed loop after `setSpeedRPM(0)`,
   `stop()` or a homing/stall hold no longer seeds the speed PID from the
   last output and input, which could drive the motor the wrong way (#12)
+- `DCMotorTacho`: the first speed sample after starting from zero no longer
+  counts the travel since the loop last ran, such as a position move, as
+  speed (#13)
+
+### Changed
+
+- `DCMotorServo::stop()` now syncs the target to the current position in
+  every case, not only when cancelling homing. A `run()` after `stop()`
+  holds instead of resuming the old move, and a speed loop started after
+  a position move no longer inherits its target (#13)
 
 ## [1.1.0] — 2026-07-16
 

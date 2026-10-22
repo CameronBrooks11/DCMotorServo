@@ -43,9 +43,9 @@ public:
   void run();
 
   /**
-   * Stops the motor by invoking the brake function. Cancels an in-progress
-   * homing move, syncing the target to the current position so the motor
-   * holds where it stopped instead of chasing the pre-homing setpoint.
+   * Stops the motor by invoking the brake function and syncs the target to
+   * the current position, so the motor holds where it stopped instead of
+   * chasing the old setpoint. Also cancels an in-progress homing move.
    */
   void stop();
 

@@ -342,14 +342,12 @@ void DCMotorServo::run()
 
 void DCMotorServo::stop()
 {
-  if (_homing)
-  {
-    // Cancelling homing: sync the target to the current position so the next
-    // run() holds here instead of chasing the stale pre-homing setpoint.
-    _homing = false;
-    _PID_input = encoderRead();
-    _PID_setpoint = _PID_input;
-  }
+  // Sync the target to the current position so the next run() holds here
+  // instead of chasing a stale setpoint (pre-homing, or wound up by
+  // DCMotorTacho's speed loop).
+  _homing = false;
+  _PID_input = encoderRead();
+  _PID_setpoint = _PID_input;
   haltMotor();
 }
 

@@ -49,7 +49,7 @@ Reads the encoder, computes PID output, and sends the result to the motor driver
 void stop()
 ```
 
-Engages the brake and suspends the PID controller. Also cancels an in-progress homing move — the target is synced to the current position so the motor holds where it stopped rather than chasing the pre-homing setpoint.
+Engages the brake, suspends the PID controller, and syncs the target to the current position so the motor holds where it stopped rather than chasing the old setpoint. Also cancels an in-progress homing move.
 
 #### `moveTo(position)`
 
@@ -277,7 +277,7 @@ Brakes the motor and disables the inner PID.
 void setSpeedRPM(double rpm)
 ```
 
-Sets the desired shaft speed in RPM. Negative values reverse direction. `0` engages the brake.
+Sets the desired shaft speed in RPM. Negative values reverse direction. `0` engages the brake. A non-zero speed after `0` starts speed measurement afresh, so travel while the loop was idle doesn't count as speed.
 
 #### `getDesiredSpeedRPM()`
 
@@ -302,6 +302,14 @@ void setPIDTunings(double Kp, double Ki, double Kd)
 ```
 
 Sets the inner (speed) PID gains. The outer (position) gains are set on the underlying `DCMotorServo`.
+
+#### `setMaxLead(counts)`
+
+```cpp
+void setMaxLead(long counts)
+```
+
+Caps how far the position target may lead the encoder, in counts. Without a cap, a stalled shaft lets the speed loop drive the target arbitrarily far ahead, and the motor lunges to catch up on release. `0` (the default) disables the cap. Set it above the lead the position PID needs to reach the PWM your load requires, or the cap limits drive.
 
 #### `getServo()`
 
