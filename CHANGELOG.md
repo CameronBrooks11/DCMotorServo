@@ -5,6 +5,14 @@ All notable changes to this library are documented here. Follows
 [Semantic Versioning](https://semver.org). History before 1.0.1 was
 reconstructed from the git log.
 
+## [Unreleased]
+
+### Fixed
+
+- `DCMotorTacho`: restarting the speed loop after `setSpeedRPM(0)`,
+  `stop()` or a homing/stall hold no longer seeds the speed PID from the
+  last output and input, which could drive the motor the wrong way (#12)
+
 ## [1.1.0] — 2026-07-16
 
 Verified by code review and compile checks; hardware bench validation

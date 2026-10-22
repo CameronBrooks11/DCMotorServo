@@ -70,6 +70,8 @@ private:
     double _speedPIDOutput;   // Inner PID output (delta encoder counts)
     double _speedPIDSetpoint; // Desired speed (RPM) – should equal _desiredSpeedRPM.
     PID *_speedPID;           // Inner PID controller.
+
+    void holdSpeedLoop(); // Put the inner PID in MANUAL with output and input at rest.
 };
 
 #endif // DCMotorTacho_h

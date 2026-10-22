@@ -27,7 +27,7 @@ void DCMotorTacho::setSpeedRPM(double rpm)
     if (rpm == 0)
     {
         // If desired speed is zero, disable inner PID and engage brake.
-        _speedPID->SetMode(MANUAL);
+        holdSpeedLoop();
         _servo->stop();
     }
     else
@@ -60,8 +60,7 @@ void DCMotorTacho::run()
     // would silently cancel an in-progress homing move.
     if (_servo->isHoming() || _servo->isStalled())
     {
-        _speedPID->SetMode(MANUAL);
-        _speedPIDOutput = 0;
+        holdSpeedLoop();
         _servo->run(); // progress homing / hold the latched brake
         // Sync AFTER run(): homing completion zeroes the encoder inside it,
         // and a pre-run() count would fake a huge speed sample next cycle.
@@ -73,7 +72,7 @@ void DCMotorTacho::run()
     // If desired speed is zero, ensure inner PID is off and stop motor.
     if (_desiredSpeedRPM == 0)
     {
-        _speedPID->SetMode(MANUAL);
+        holdSpeedLoop();
         _servo->stop();
         return;
     }
@@ -104,9 +103,19 @@ void DCMotorTacho::run()
  */
 void DCMotorTacho::stop()
 {
-    _speedPIDOutput = _desiredSpeedRPM = _speedPIDSetpoint = 0;
+    _desiredSpeedRPM = _speedPIDSetpoint = 0;
     _servo->stop();
+    holdSpeedLoop();
+}
+
+void DCMotorTacho::holdSpeedLoop()
+{
+    // The next MANUAL->AUTOMATIC transition seeds the integral from the
+    // output and the derivative from the input. The motor is braked or
+    // homing whenever the loop is held, so restart both from rest.
     _speedPID->SetMode(MANUAL);
+    _speedPIDOutput = 0;
+    _speedPIDInput = 0;
 }
 
 DCMotorServo *DCMotorTacho::getServo() const
