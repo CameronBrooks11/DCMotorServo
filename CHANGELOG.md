@@ -7,6 +7,14 @@ reconstructed from the git log.
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-10-23
+
+#11, #12 and #13 were bench-checked at `cc8bad6` on a Slice_DCMT gen2
+board (Nano Every) on 2026-10-22, and a 300-count `setMaxLead()` removed
+the lunge after a held stall
+([record](https://github.com/feastorg/Slice_DCMT/blob/main/docs/bench/2026-10-22-applied-pwm-and-library-fixes.md)).
+#19 is checked by host test only.
+
 ### Added
 
 - `DCMotorTacho::setMaxLead()` caps how far the speed loop can drive the
