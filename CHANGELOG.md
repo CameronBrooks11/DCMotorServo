@@ -17,6 +17,10 @@ reconstructed from the git log.
 
 - `setAccuracy()` no longer wraps values above 255: the tolerance is now
   stored as `unsigned int`, matching the parameter (#11)
+- `run()` and `finished()` compare the position error with `fabs()`. On
+  the megaavr core (Nano Every) `abs()` converted it to a 16-bit `int`, so
+  an error near a multiple of 65,536 counts read as inside the deadband
+  and the motor was not driven (#19)
 - `DCMotorTacho`: restarting the speed loop after `setSpeedRPM(0)`,
   `stop()` or a homing/stall hold no longer seeds the speed PID from the
   last output and input, which could drive the motor the wrong way (#12)

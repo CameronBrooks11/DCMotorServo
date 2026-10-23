@@ -73,7 +73,7 @@ void DCMotorServo::setPIDTunings(double Kp, double Ki, double Kd)
 
 bool DCMotorServo::finished()
 {
-  return !_homing && abs(_PID_setpoint - _PID_input) < _position_accuracy && _PWM_output == 0;
+  return !_homing && fabs(_PID_setpoint - _PID_input) < _position_accuracy && _PWM_output == 0;
 }
 
 void DCMotorServo::move(long new_rela_position)
@@ -303,7 +303,7 @@ void DCMotorServo::run()
   // Compute a PWM value that adds a base skip value
   int outputPWM = constrain(abs(_PID_output) + _pwm_skip, _pwm_skip, _maxPWM);
 
-  if (abs(error) < _position_accuracy)
+  if (fabs(error) < _position_accuracy)
   {
     myPID->SetMode(MANUAL);
     _PID_output = 0;

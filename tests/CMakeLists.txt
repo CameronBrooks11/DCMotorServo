@@ -20,9 +20,23 @@ target_include_directories(dcmotorservo PUBLIC ../src fakes ${pid_SOURCE_DIR})
 target_compile_definitions(dcmotorservo PUBLIC ARDUINO=100)
 target_compile_options(dcmotorservo PRIVATE -Wall -Wextra)
 
+# The library again, with abs() taking a 16-bit int as on the megaavr core.
+add_library(dcmotorservo_int16_abs STATIC
+  ../src/DCMotorServo.cpp
+  ../src/DCMotorTacho.cpp
+  ${pid_SOURCE_DIR}/PID_v1.cpp
+  fakes/Arduino.cpp)
+target_include_directories(dcmotorservo_int16_abs PUBLIC ../src fakes ${pid_SOURCE_DIR})
+target_compile_definitions(dcmotorservo_int16_abs PUBLIC ARDUINO=100 FAKE_INT16_ABS)
+target_compile_options(dcmotorservo_int16_abs PRIVATE -Wall -Wextra)
+
 enable_testing()
 foreach(name test_servo_smoke test_servo_accuracy test_servo_stop test_tacho_restart test_tacho_resync test_tacho_max_lead)
   add_executable(${name} ${name}.cpp)
   target_link_libraries(${name} PRIVATE dcmotorservo)
   add_test(NAME ${name} COMMAND ${name})
 endforeach()
+
+add_executable(test_servo_int16_abs test_servo_int16_abs.cpp)
+target_link_libraries(test_servo_int16_abs PRIVATE dcmotorservo_int16_abs)
+add_test(NAME test_servo_int16_abs COMMAND test_servo_int16_abs)
