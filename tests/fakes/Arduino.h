@@ -2,6 +2,7 @@
 #ifndef FAKE_ARDUINO_H
 #define FAKE_ARDUINO_H
 
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -13,8 +14,19 @@ typedef uint8_t byte;
 extern unsigned long fake_millis;
 inline unsigned long millis() { return fake_millis; }
 
+#ifdef FAKE_INT16_ABS
+// The megaavr core (Nano Every) leaves C++ abs() to avr-libc's abs(int):
+// a double is converted to a 16-bit int, keeping its low two bytes.
+inline int16_t fake_int16_abs(double x)
+{
+  int16_t i = (int16_t)(long)x;
+  return i < 0 ? (int16_t)-i : i;
+}
+#define abs(x) fake_int16_abs(x)
+#else
 // Same macros as the AVR core, so abs() on a double behaves as on target.
 #define abs(x) ((x) > 0 ? (x) : -(x))
+#endif
 #define constrain(amt, low, high) ((amt) < (low) ? (low) : ((amt) > (high) ? (high) : (amt)))
 
 class String : public std::string
