@@ -44,7 +44,11 @@ public:
      * default) disables the cap.
      */
     void setMaxLead(long counts);
-    /// Get the most recently measured speed (RPM).
+    /**
+     * Get the most recently measured speed (RPM). It is measured while the
+     * setpoint is 0 as well, but not while the servo is homing or
+     * stall-latched.
+     */
     double getMeasuredSpeedRPM() const;
     /**
      * Run the cascaded control loops (inner speed loop + outer position loop).
@@ -79,6 +83,7 @@ private:
     PID *_speedPID;           // Inner PID controller.
 
     void holdSpeedLoop(); // Put the inner PID in MANUAL with output and input at rest.
+    bool measureSpeed();  // Take a speed sample if an interval has passed.
 };
 
 #endif // DCMotorTacho_h
