@@ -13,6 +13,12 @@ reconstructed from the git log.
   [feastorg/dcmotorservo](https://github.com/feastorg/dcmotorservo). The
   old GitHub URL redirects, and the PlatformIO package name is unchanged.
 
+### Fixed
+
+- `DCMotorTacho::getMeasuredSpeedRPM()` no longer keeps the last running
+  speed while the setpoint is 0. The speed is still measured then, so it
+  reads 0 once the shaft stops (#18)
+
 ## [1.2.0] — 2026-10-23
 
 #11, #12 and #13 were bench-checked at `cc8bad6` on a Slice_DCMT gen2

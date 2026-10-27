@@ -87,16 +87,14 @@ void DCMotorTacho::run()
     {
         holdSpeedLoop();
         _servo->stop();
+        // Keep measuring, so the reading follows the shaft to rest, or a
+        // shaft turned by hand.
+        measureSpeed();
         return;
     }
 
-    unsigned long currentTime = millis();
-    unsigned long dt = currentTime - _lastSpeedUpdate;
-    if (dt >= _speedInterval)
+    if (measureSpeed())
     {
-        long currentCount = _servo->getActualPosition();
-        // Calculate measured speed in RPM.
-        _measuredSpeedRPM = ((double)(currentCount - _lastEncoderCount) / _CPR) * (60000.0 / dt);
         _speedPIDInput = _measuredSpeedRPM;
         // Re-arm in case the hold above put the PID in MANUAL (no-op when
         // already AUTOMATIC; the MANUAL->AUTOMATIC transition reinitializes).
@@ -107,14 +105,12 @@ void DCMotorTacho::run()
         if (_maxLead > 0)
         {
             // Don't let a stalled shaft bank travel for a lunge on release.
-            long lead = _servo->getRequestedPosition() - currentCount;
+            long lead = _servo->getRequestedPosition() - _lastEncoderCount;
             if (lead > _maxLead)
-                _servo->moveTo(currentCount + _maxLead);
+                _servo->moveTo(_lastEncoderCount + _maxLead);
             else if (lead < -_maxLead)
-                _servo->moveTo(currentCount - _maxLead);
+                _servo->moveTo(_lastEncoderCount - _maxLead);
         }
-        _lastEncoderCount = currentCount;
-        _lastSpeedUpdate = currentTime;
     }
     // Execute the outer (position) loop.
     _servo->run();
@@ -128,6 +124,20 @@ void DCMotorTacho::stop()
     _desiredSpeedRPM = _speedPIDSetpoint = 0;
     _servo->stop();
     holdSpeedLoop();
+}
+
+// Takes a speed sample once per speed interval. True when it took one.
+bool DCMotorTacho::measureSpeed()
+{
+    unsigned long currentTime = millis();
+    unsigned long dt = currentTime - _lastSpeedUpdate;
+    if (dt < _speedInterval)
+        return false;
+    long currentCount = _servo->getActualPosition();
+    _measuredSpeedRPM = ((double)(currentCount - _lastEncoderCount) / _CPR) * (60000.0 / dt);
+    _lastEncoderCount = currentCount;
+    _lastSpeedUpdate = currentTime;
+    return true;
 }
 
 void DCMotorTacho::holdSpeedLoop()
