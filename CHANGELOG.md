@@ -7,6 +7,12 @@ reconstructed from the git log.
 
 ## [Unreleased]
 
+### Changed
+
+- The repository moved to
+  [feastorg/dcmotorservo](https://github.com/feastorg/dcmotorservo). The
+  old GitHub URL redirects, and the PlatformIO package name is unchanged.
+
 ## [1.2.0] — 2026-10-23
 
 #11, #12 and #13 were bench-checked at `cc8bad6` on a Slice_DCMT gen2
@@ -47,7 +53,7 @@ the lunge after a held stall
 
 Verified by code review and compile checks; hardware bench validation
 is tracked in
-[#3](https://github.com/CameronBrooks11/DCMotorServo/issues/3).
+[#3](https://github.com/feastorg/dcmotorservo/issues/3).
 
 ### Added
 

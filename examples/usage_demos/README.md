@@ -11,4 +11,4 @@ Ready-to-run sketches showing DCMotorServo/DCMotorTacho with real driver hardwar
 | `lmd18200_dual` | LMD18200 | Two independent position servos |
 | `lmd18200_speed` | LMD18200 | Speed control via DCMotorTacho |
 
-The demos depend on the matching driver library — [L298N](https://github.com/CameronBrooks11/L298N_Arduino) or [LMD18200](https://github.com/CameronBrooks11/lmd18200) — in addition to DCMotorServo's own dependencies. See [docs/getting-started.md](../../docs/getting-started.md#example-driver-libraries).
+The demos depend on the matching driver library — [L298N](https://github.com/feastorg/l298n) or [LMD18200](https://github.com/feastorg/lmd18200) — in addition to DCMotorServo's own dependencies. See [docs/getting-started.md](../../docs/getting-started.md#example-driver-libraries).
