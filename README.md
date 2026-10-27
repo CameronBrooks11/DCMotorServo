@@ -23,7 +23,7 @@ Declared in the manifests and resolved automatically by PlatformIO; via Library 
 - [PID](https://github.com/br3ttb/Arduino-PID-Library) by Brett Beauregard
 - [Encoder](https://www.pjrc.com/teensy/td_libs_Encoder.html) by Paul Stoffregen
 
-The bundled examples additionally use the [L298N](https://github.com/CameronBrooks11/L298N_Arduino) and [LMD18200](https://github.com/CameronBrooks11/lmd18200) driver libraries (example-only — your own wrappers replace them in real projects).
+The bundled examples additionally use the [L298N](https://github.com/feastorg/l298n) and [LMD18200](https://github.com/feastorg/lmd18200) driver libraries (example-only — your own wrappers replace them in real projects).
 
 ## Getting started
 
