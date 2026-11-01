@@ -7,6 +7,10 @@ reconstructed from the git log.
 
 ## [Unreleased]
 
+## [1.2.1] — 2026-11-01
+
+#18 is checked by host test only.
+
 ### Changed
 
 - The repository moved to
